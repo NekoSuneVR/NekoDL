@@ -9,13 +9,13 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ## Phase 0 — Planning & Decisions
 
 - [x] Write initial README.md, TODO.md, CHANGELOG.md
-- [ ] Decide final project license (MIT/Apache-2.0/GPL — note BoothDownloader is Apache-2.0, yt-dlp is Unlicense, keep compatible)
-- [ ] Decide core language/runtime (proposed: Go — confirm or revise)
-- [ ] Decide BitTorrent library (proposed: `anacrolix/torrent` — confirm it supports custom dialers cleanly for SOCKS5/WireGuard)
-- [ ] Decide how BoothDownloader is invoked: shell out to its CLI binary vs. reimplement its Booth API calls natively (avoids a .NET runtime dependency in the container)
-- [ ] Decide config format (YAML vs TOML vs JSON) and config file name (`nekodl.yaml`?)
-- [ ] Decide project name for the RPC protocol / whether to ship an aria2-compatible RPC shim
-- [ ] Pick a repo layout (monorepo: `core/`, `web/`, `docker/` vs separate repos)
+- [x] Decide final project license → **MIT**. Permissive, compatible with BoothDownloader (Apache-2.0, used only as a wrapped/invoked dependency, not vendored source) and yt-dlp (Unlicense).
+- [x] Decide core language/runtime → **Go**, confirmed.
+- [x] Decide BitTorrent library → **`anacrolix/torrent`**, confirmed as the plan; final validation of custom-dialer proxy binding happens when Phase 3 starts and a Go toolchain is available to build against it.
+- [x] Decide how BoothDownloader is invoked → **shell out to its released CLI binary** for v1 (simplest, reuses its working auth flow); native reimplementation stays a possible later optimization to drop the runtime dependency.
+- [x] Decide config format → **JSON** for v1 (`nekodl.json`), parsed with the Go standard library only, no third-party dependency required to get the core running before a build pipeline exists. YAML remains an open revisit once tooling is in place.
+- [x] Decide RPC approach → NekoDL's own REST/WebSocket API is primary (Phase 1); the aria2-compatible JSON-RPC shim (needed for Radarr/Sonarr/Lidarr) is an additional compatibility layer built in Phase 12, not the core protocol.
+- [x] Pick a repo layout → **monorepo**: root docs + `core/` (Go backend) + `web/` (React dashboard, added when Phase 7 starts) + `docker/` (added when Phase 8 starts).
 
 ## Phase 1 — Core Engine Skeleton
 
@@ -184,7 +184,7 @@ A from-scratch, NekoDL-native equivalent of [Tunarr](https://tunarr.com/): sched
 
 ## Phase 13 — Polish, Docs, Release
 
-- [ ] Finalize license and add LICENSE file
+- [x] Finalize license and add LICENSE file (MIT, added in Phase 0)
 - [ ] Write user-facing setup docs (replacing the "Quick Start" placeholder in README.md)
 - [ ] Write CONTRIBUTING.md
 - [ ] Security review of secret handling (Booth token, proxy credentials, API tokens, aria2/*arr RPC secret)
@@ -195,9 +195,8 @@ A from-scratch, NekoDL-native equivalent of [Tunarr](https://tunarr.com/): sched
 
 ## Open Questions
 
-- Final license choice?
-- Go vs. Node/TypeScript for the core — Go was chosen for the proposal for static binaries + concurrency, but worth confirming before Phase 1 starts.
-- Ship BoothDownloader integration by shelling out to its released binary (needs .NET in the image) or reimplement its (small) API surface natively in the core language?
+Resolved in Phase 0 (license, core language, BoothDownloader invocation, config format, repo layout — see Phase 0 above). Still open:
+
 - Should the aria2-compatible RPC shim (needed for Radarr/Sonarr/Lidarr, Phase 9/12) be pulled forward and built earlier than Phase 12, given how much it unlocks?
 - Is Usenet/NZB support (SABnzbd/NZBGet-style) ever in scope, or is NekoDL torrent/yt-dlp/Booth only? Affects how much *arr-stack coverage is achievable.
 - For *arr category→directory mapping: fixed config mapping, or auto-create subfolders per category on demand?

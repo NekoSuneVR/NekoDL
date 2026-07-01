@@ -189,7 +189,7 @@ docker compose up -d
 
 ## License
 
-TBD — will be finalized before first release. Tracked in [TODO.md](TODO.md).
+[MIT](LICENSE).
 
 ## Contributing
 
