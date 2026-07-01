@@ -89,6 +89,13 @@ Torrenting is the one protocol that leaks your IP to strangers by design, so Nek
 - Recommended Docker deployment: run NekoDL's torrent engine with `network_mode: "service:vpn"` alongside a VPN sidecar (e.g. [gluetun](https://github.com/qdm12/gluetun)) for OS-level network isolation, in addition to the app-level kill switch.
 - HTTP/yt-dlp/Booth downloads are not routed through the torrent proxy by default (they're not P2P and don't leak your IP the same way), but per-task proxy overrides will be available for all engines.
 
+**VPN provider support.** NekoDL does not implement per-provider login flows itself — that would mean re-building and maintaining what gluetun already does well. Instead:
+
+- **Named providers** (ProtonVPN, Mullvad, PIA, AirVPN, IVPN, Windscribe, Surfshark, NordVPN, CyberGhost, ExpressVPN, and ~15 others) work out of the box through gluetun's native provider support — you give gluetun your account credentials via environment variables and it handles authentication and WireGuard/OpenVPN setup.
+- **Any other provider** that lets you download a standard WireGuard or OpenVPN config file works too, either via gluetun's generic "custom" provider mode or NekoDL's own per-task WireGuard/SOCKS5 binding — no provider-specific code needed.
+- **Proprietary-protocol services are out of scope.** Hotspot Shield (Catapult Hydra) and similar VPNs that don't expose a standard WireGuard/OpenVPN config or public client library can't be integrated this way, full stop.
+- **"Free" VPNs are not a target use case.** Most free tiers (ProtonVPN Free, Windscribe Free, TunnelBear) explicitly prohibit P2P/torrenting in their terms of service, and a free-and-P2P-friendly VPN that isn't monetizing you some other way (logging, ads, bandwidth reselling) is rare enough that NekoDL doesn't maintain or recommend a "free VPN" list.
+
 ## Media Automation (Ombi / Radarr / Sonarr / Lidarr / Prowlarr / Tdarr)
 
 NekoDL is designed to slot into an existing [Ombi](https://ombi.io/) + [*arr](https://wiki.servarr.com/) + [Tdarr](https://home.tdarr.io/) stack, covering four distinct jobs end-to-end — **request**, **find**, **fetch**, and **transcode** — without NekoDL trying to own all of them itself:

@@ -23,6 +23,8 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Scaffolded the Go core skeleton (`core/`): JSON config loader, stdlib HTTP server with a `/health` endpoint, graceful shutdown, and the internal `Task` interface that every download engine will implement. Not yet build-verified — no Go toolchain was available in this environment to run `go build`/`go vet`.
 - Scaffolded the web dashboard (`web/`): Vite + React + TypeScript + Tailwind CSS v4, dark/green design tokens, and working `ToastProvider`/`Toast` and `Modal` components with a `no-alert` lint rule enforcing the "no native browser dialogs" constraint. Build-verified with `npm run build` and `npm run lint`.
 
+- Decided VPN provider support strategy: no per-provider integration code in NekoDL. Named providers (ProtonVPN, Mullvad, PIA, AirVPN, IVPN, Windscribe, Surfshark, NordVPN, CyberGhost, ExpressVPN, etc.) work via gluetun's native support; any other provider works via a standard WireGuard/OpenVPN config. Proprietary-protocol VPNs (e.g. Hotspot Shield) and "free" VPN services are explicitly out of scope.
+
 ### Notes
 - Beyond the two scaffolds above, no download engines, scheduler, task queue, or real dashboard views exist yet — see [TODO.md](TODO.md) for the phased build plan.
 

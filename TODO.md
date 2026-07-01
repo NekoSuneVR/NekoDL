@@ -46,6 +46,9 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] Bandwidth limits specific to torrent tasks
 - [ ] Document recommended Docker network isolation pattern (sidecar VPN container via `network_mode: service:vpn`)
 - [ ] Manual test: confirm no real-IP leak occurs under simulated proxy drop
+- [x] Decide VPN provider support strategy → **no per-provider code in NekoDL.** Confirmed by reading gluetun's source (`internal/provider/`) that it natively supports ~25 named providers (ProtonVPN, Mullvad, PIA, AirVPN, IVPN, Windscribe, Surfshark, NordVPN, CyberGhost, ExpressVPN, etc. — auth via env vars) plus a generic "custom" WireGuard/OpenVPN config mode for everything else. NekoDL's job is just the per-task proxy/WireGuard binding + kill switch above; gluetun (or any standard WireGuard/OpenVPN config) does provider auth.
+- [x] Explicitly out of scope: VPNs using proprietary, non-standard protocols with no public client library (e.g. Hotspot Shield's Catapult Hydra) — no way to integrate without reverse-engineering, and Hotspot Shield's free tier bans P2P anyway.
+- [x] Explicitly not a target use case: "free" VPN services. Most prohibit P2P/torrenting in their ToS (ProtonVPN Free, Windscribe Free, TunnelBear); NekoDL won't maintain a "recommended free VPN" list.
 
 ## Phase 4 — yt-dlp Engine ("fixed yt-dlp")
 
