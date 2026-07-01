@@ -77,6 +77,13 @@ func (d *Downloader) Metadata(ctx context.Context, rawURL string) (FileMetadata,
 // resumable Range requests, so this doesn't plug into the segmented/resumable
 // httpengine the way plain HTTP and resolver-based downloads do. See TODO.md.
 func (d *Downloader) Download(ctx context.Context, rawURL, destPath string) (FileMetadata, error) {
+	return d.DownloadWithProgress(ctx, rawURL, destPath, nil)
+}
+
+// DownloadWithProgress is Download, plus an optional callback invoked with
+// the cumulative decrypted byte count as the file streams in — used by Task
+// to report Progress() without needing its own copy of this logic.
+func (d *Downloader) DownloadWithProgress(ctx context.Context, rawURL, destPath string, onProgress func(int64)) (FileMetadata, error) {
 	info, fk, _, err := d.resolve(ctx, rawURL)
 	if err != nil {
 		return FileMetadata{}, err
@@ -103,6 +110,9 @@ func (d *Downloader) Download(ctx context.Context, rawURL, destPath string) (Fil
 	if err != nil {
 		return FileMetadata{}, err
 	}
+	if onProgress != nil {
+		plainReader = &countingReader{r: plainReader, onProgress: onProgress}
+	}
 
 	out, err := os.Create(destPath)
 	if err != nil {
@@ -115,4 +125,19 @@ func (d *Downloader) Download(ctx context.Context, rawURL, destPath string) (Fil
 	}
 
 	return FileMetadata{Name: name, Size: info.Size}, nil
+}
+
+type countingReader struct {
+	r          io.Reader
+	total      int64
+	onProgress func(int64)
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	if n > 0 {
+		c.total += int64(n)
+		c.onProgress(c.total)
+	}
+	return n, err
 }
