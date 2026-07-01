@@ -30,7 +30,7 @@ func main() {
 
 	store := scheduler.NewStore(cfg.DataDir)
 	sched := scheduler.New(cfg.MaxConcurrentDownloads, store)
-	resolvers := resolver.NewRegistry(resolver.Dropbox{}, resolver.Pixeldrain{})
+	resolvers := resolver.NewRegistry(resolver.Dropbox{}, resolver.Pixeldrain{}, resolver.GoogleDrive{}, resolver.Mediafire{})
 
 	persistCtx, stopPersisting := context.WithCancel(context.Background())
 	defer stopPersisting()
