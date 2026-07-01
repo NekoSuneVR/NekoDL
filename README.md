@@ -27,7 +27,7 @@ NekoDL keeps the parts of aria2's design that work well (a lightweight RPC-drive
 - 🛍️ **BoothDownloader engine** — wraps [Myrkie/BoothDownloader](https://github.com/Myrkie/BoothDownloader) to pull owned images/files/gifts/orders from [Booth.pm](https://booth.pm) using your account cookie/token.
 - 🎥 **Plex ripping engine** — [Pledo](https://github.com/nekosuneprojects/pledo)-inspired: log in via plex.tv (no password typed into NekoDL), browse any Plex server you have access to, and download movies/TV/playlists directly, including multiple resolution/codec versions.
 - 🌐 **HTTP/HTTPS/FTP** downloads with multi-connection segmented fetching, resume, and checksum verification.
-- 📁 **One-click hoster support** — Mediafire, Dropbox, Google Drive, and Mega.nz via a pluggable site resolver (same pattern as engines), with more hosts addable over time.
+- 📁 **One-click hoster support** — Dropbox, Pixeldrain, Catbox.moe, Google Drive, Mediafire, and Mega.nz via a pluggable site resolver (same pattern as engines), with more hosts addable over time.
 - 🖥️ **Web GUI dashboard** — queue management, live speed/progress graphs, per-download proxy overrides, drag-and-drop `.torrent`/cookie files.
 - 🎨 **Modern dark, green-themed UI** — Tailwind CSS design system, fully custom toast/alert components and modal dialogs for prompts/confirmations. No native `alert()`/`confirm()`/`prompt()` anywhere in the app.
 - 🔌 **JSON-RPC / REST / WebSocket API** — scriptable like aria2, with an aria2-compatible RPC shim so existing tools (e.g. browser "send to aria2" extensions, and the *arr suite below) keep working.
@@ -157,9 +157,13 @@ Mediafire, Dropbox, Google Drive, Mega.nz, and similar "one-click hoster" links 
 Difficulty varies sharply by site:
 
 - **Dropbox** — easy; shared links already support a direct-download URL form, just a rewrite.
+- **Pixeldrain** — easy; has a real, documented public API (`GET /api/file/{id}`, no auth, byte-range support) — no scraping at all.
+- **Catbox.moe** — trivial; uploaded files already get a permanent static URL, there's nothing to resolve.
 - **Google Drive** — moderate; needs the "can't scan for viruses, download anyway?" confirmation flow and folder-vs-file detection.
-- **Mediafire** — moderate but fragile; no public API, so the resolver scrapes the share page for the real CDN link and will need periodic fixes when Mediafire changes its markup.
+- **Mediafire** / **Gofile** — moderate but fragile; no confirmed public API for arbitrary files, so the resolver scrapes the share page for the real CDN link and will need periodic fixes when the site's markup changes.
 - **Mega.nz** — a different category of problem, not just scraping: Mega encrypts everything client-side with a key embedded in the URL fragment. NekoDL uses an existing, hardened Go MEGA client library for this rather than hand-rolling the crypto — getting encryption subtly wrong fails silently (corrupted files) or worse, so this is one case where reuse beats a from-scratch implementation.
+
+**Workupload was evaluated and deprioritized**: every page checked was behind a Cloudflare bot-check challenge with no discoverable public API, so a resolver would mean solving an anti-automation challenge rather than calling a documented endpoint. Revisit only if that changes.
 
 Some one-click hosters' terms of service restrict automated/bulk downloading — that's on you to check for the specific host and files involved.
 

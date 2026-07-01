@@ -28,6 +28,7 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Installed a Go 1.26 toolchain (via `winget`) and used it to actually verify everything above: `go build ./...` and `go vet ./...` pass clean, and all 7 scheduler/store unit tests pass.
 - Real WebSocket support for live progress events (`GET /api/v1/events`), hand-rolled against RFC 6455 using only the Go standard library — replacing the earlier Server-Sent Events placeholder. Verified live by running the server and connecting a genuine, independent WebSocket client to it (not just a compile check): the handshake completed and 5 correctly-framed JSON text frames were received before a clean disconnect.
 - Planned one-click-hoster support (Mediafire, Dropbox, Google Drive, Mega.nz) in Phase 2 via a pluggable Resolver interface. Decided to use an existing Go MEGA client library rather than hand-rolling Mega.nz's client-side encryption scheme.
+- Researched and added Pixeldrain (confirmed real public API, no scraping) and Catbox.moe (trivial — files are already static direct URLs) as easy Phase 2 resolver targets; added Gofile as an unconfirmed candidate. Evaluated Workupload and deprioritized it — every page checked was behind a Cloudflare bot-check with no discoverable API.
 
 ### Notes
 - No real download engines exist yet (HTTP/FTP, BitTorrent, yt-dlp, Booth, Plex ripper) — the scheduler and API currently have nothing to schedule. See [TODO.md](TODO.md) for the phased build plan.
