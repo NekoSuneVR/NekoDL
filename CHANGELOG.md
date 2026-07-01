@@ -21,8 +21,9 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Recorded Phase 0 decisions: MIT license, Go core, JSON config (`nekodl.json`) for v1, monorepo layout (`core/`, `web/`, `docker/`), BoothDownloader invoked by shelling out to its CLI.
 - Added `LICENSE` (MIT) and `.gitignore`.
 - Scaffolded the Go core skeleton (`core/`): JSON config loader, stdlib HTTP server with a `/health` endpoint, graceful shutdown, and the internal `Task` interface that every download engine will implement. Not yet build-verified — no Go toolchain was available in this environment to run `go build`/`go vet`.
+- Scaffolded the web dashboard (`web/`): Vite + React + TypeScript + Tailwind CSS v4, dark/green design tokens, and working `ToastProvider`/`Toast` and `Modal` components with a `no-alert` lint rule enforcing the "no native browser dialogs" constraint. Build-verified with `npm run build` and `npm run lint`.
 
 ### Notes
-- Beyond the core skeleton above, no download engines, scheduler, or Web GUI exist yet — see [TODO.md](TODO.md) for the phased build plan.
+- Beyond the two scaffolds above, no download engines, scheduler, task queue, or real dashboard views exist yet — see [TODO.md](TODO.md) for the phased build plan.
 
 [Unreleased]: https://github.com/NekoSuneVR/NekoDL

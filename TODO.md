@@ -97,12 +97,12 @@ Native engine modeled on [nekosuneprojects/pledo](https://github.com/nekosunepro
 
 ## Phase 7 — Web GUI Dashboard
 
-- [ ] Scaffold SPA (React/Vite/Tailwind CSS or confirmed alternative)
-- [ ] Design system setup: Tailwind config with a dark, green-accented color palette (base/surface/border/text tokens + green scale for primary actions and progress states)
-- [ ] Build custom **Toast** component (success/error/warning/info variants, auto-dismiss + manual dismiss, stacking) — this is the *only* way the app surfaces background notifications
-- [ ] Build custom **Modal/Dialog** component for confirmations and input prompts (keyboard-accessible, focus-trapped, escape-to-close) — this is the *only* way the app asks for confirmation or input
-- [ ] Hard rule: no `window.alert()` / `window.confirm()` / `window.prompt()` anywhere in the codebase; enforce with a lint rule (e.g. ESLint `no-restricted-globals`)
-- [ ] Shared component kit: buttons, inputs, dropdowns, progress bars, badges, tabs — all themed, none left as unstyled browser defaults
+- [x] Scaffold SPA — Vite + React + TypeScript in `web/`, built with `npm create vite@latest -- --template react-ts`. Build-verified: `npm run build` and `npm run lint` both pass.
+- [x] Design system setup — Tailwind CSS v4 (`@tailwindcss/vite` plugin, CSS-first `@theme` config) with dark surface tokens and a green `brand` scale (`web/src/index.css`)
+- [x] Build custom **Toast** component — success/error/warning/info variants, auto-dismiss (5s) + manual dismiss, stacking (`web/src/components/Toast.tsx`)
+- [x] Build custom **Modal/Dialog** component — focus-trapped, escape-to-close, keyboard-accessible (`web/src/components/Modal.tsx`)
+- [x] Hard rule: no `window.alert()` / `window.confirm()` / `window.prompt()` — enforced via oxlint's `no-alert` rule in `web/.oxlintrc.json`, verified it actually fires on a test file before removing the test
+- [ ] Shared component kit: buttons, inputs, dropdowns, progress bars, badges, tabs — only ad-hoc Tailwind classes on individual buttons exist so far, not an extracted, reusable kit
 - [ ] Task list view: status, speed, ETA, progress bar, engine type icon (HTTP/torrent/yt-dlp/Booth)
 - [ ] Add-task flow: URL/magnet/torrent-file/Booth-ID input, auto-detect engine type
 - [ ] Per-task detail view: files, peers (for torrents), logs (for yt-dlp/Booth)
