@@ -1,0 +1,52 @@
+# Recommended deployment for torrenting: NekoDL's container shares
+# gluetun's network namespace, so ALL of its traffic — not just the
+# app-level SOCKS5-bound torrent tasks — is forced through the VPN at the
+# OS/network level. This is the two-layer privacy setup described in
+# README.md's "Privacy Model": gluetun for network isolation, plus
+# NekoDL's own per-task kill switch as a second, independent check.
+#
+# Usage:
+#   cp docker-compose.vpn.yml.env-example .env   # not included yet — set
+#                                                  # VPN_SERVICE_PROVIDER,
+#                                                  # VPN_TYPE, and your
+#                                                  # provider's credentials
+#                                                  # per gluetun's docs:
+#                                                  # https://github.com/qdm12/gluetun-wiki
+#   docker compose -f docker-compose.vpn.yml up -d
+#
+# Because NekoDL shares gluetun's network namespace, its ports are
+# published by the gluetun service below, not by nekodl itself.
+services:
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER:-custom}
+      - VPN_TYPE=${VPN_TYPE:-wireguard}
+      # Provider-specific auth vars (e.g. OPENVPN_USER/OPENVPN_PASSWORD,
+      # WIREGUARD_PRIVATE_KEY, etc.) go here or in a .env file — see
+      # gluetun's docs for the exact vars your provider needs.
+    ports:
+      - "6900:6900" # NekoDL's API/dashboard, published here since nekodl shares this netns
+    volumes:
+      - gluetun-data:/gluetun
+    restart: unless-stopped
+
+  nekodl:
+    build: .
+    image: nekodl:latest
+    container_name: nekodl
+    network_mode: "service:gluetun"
+    depends_on:
+      - gluetun
+    volumes:
+      - nekodl-data:/data
+    restart: unless-stopped
+
+volumes:
+  nekodl-data:
+  gluetun-data:

@@ -1,0 +1,20 @@
+# Standalone deployment — no VPN sidecar. Fine for HTTP/one-click-hoster
+# downloads; for torrents without a proxy configured, NekoDL will warn (not
+# silently proceed) that your real IP is visible to peers. See
+# docker-compose.vpn.yml for the recommended torrent-safe setup, and
+# README.md's "Privacy Model" section for why.
+services:
+  nekodl:
+    build: .
+    image: nekodl:latest
+    container_name: nekodl
+    ports:
+      - "6900:6900"
+    volumes:
+      - nekodl-data:/data
+      # Uncomment to use your own config instead of the image's default:
+      # - ./nekodl.json:/app/nekodl.json:ro
+    restart: unless-stopped
+
+volumes:
+  nekodl-data:

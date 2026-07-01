@@ -1,0 +1,8 @@
+{
+  "listen_addr": ":6900",
+  "data_dir": "/data",
+  "log_level": "info",
+  "api_token": "",
+  "max_concurrent_downloads": 5,
+  "static_dir": "/app/web/dist"
+}

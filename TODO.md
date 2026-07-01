@@ -150,13 +150,15 @@ Native engine modeled on [nekosuneprojects/pledo](https://github.com/nekosunepro
 
 ## Phase 8 — Docker & Deployment
 
-- [ ] Multi-stage Dockerfile (build core + web, ship a slim runtime image)
-- [ ] `docker-compose.yml` — standalone mode
-- [ ] `docker-compose.vpn.yml` (or profile) — example compose wiring NekoDL's torrent engine through a gluetun/WireGuard sidecar
-- [ ] Persistent volumes: downloads dir, config, session state
-- [ ] Health checks
-- [ ] Publish images (GHCR or Docker Hub — decide which)
-- [ ] Document environment variables / config precedence
+- [x] Multi-stage Dockerfile (`Dockerfile`, repo root — build context needs both `core/` and `web/`) — stage 1 builds the web dashboard (`node:22-alpine`), stage 2 cross-compiles the Go core for the target platform (`golang:1.24-alpine`, `CGO_ENABLED=0`, using buildx's `TARGETOS`/`TARGETARCH` build args), stage 3 is a slim `alpine:3.20` runtime running as a non-root user.
+- [x] Along the way: wired real static-file serving into the API (`core/internal/api/static.go`, `Config.StaticDir`) — the Dockerfile packages the built dashboard, but nothing would have served it without this. SPA-style fallback to `index.html` for unmatched paths, registered on `"/"` which Go's `ServeMux` only reaches for requests that don't match a more specific pattern, so it can't shadow the API routes. **Live-verified**: built the real dashboard, pointed a running server at it, confirmed `/` serves `index.html`, a real asset serves with the correct `Content-Type`, and `/health`/the API still work alongside it.
+- [x] `docker-compose.yml` — standalone mode.
+- [x] `docker-compose.vpn.yml` — gluetun sidecar example (`network_mode: "service:gluetun"`, ports published by gluetun since nekodl shares its network namespace). Not live-tested against a real VPN provider (would need real credentials) — the compose structure itself is the well-established, widely-used pattern for this (same approach as qBittorrent+gluetun setups), not something novel to verify.
+- [x] Persistent volumes: `/data` (downloads + `tasks.json` session state) via a named volume in both compose files. Config: either the image's baked-in default (`nekodl.docker.json`) or a mounted override file — see the env var option below for a lighter-weight alternative.
+- [x] Health checks — `HEALTHCHECK` in the Dockerfile hitting `/health` (unauthenticated by design, see Phase 1).
+- [x] Publish images → **GHCR** (`ghcr.io/nekosunevr/nekodl`), via `.github/workflows/docker.yml`: multi-arch (`linux/amd64,linux/arm64`) build using `docker/setup-qemu-action` + buildx, pushed on every push to `main` and on manual `workflow_dispatch`; PRs build (catching cross-compile breakage) but don't push.
+- [x] Document environment variables / config precedence — added `NEKODL_*` env var overrides to `core/internal/config` (`LISTEN_ADDR`, `DATA_DIR`, `LOG_LEVEL`, `API_TOKEN`, `STATIC_DIR`, `MAX_CONCURRENT_DOWNLOADS`), precedence env > config file > defaults, so Docker users can do `docker run -e NEKODL_API_TOKEN=...` without rebuilding or mounting a custom file. 4 unit tests (missing file → defaults, file overrides defaults, env overrides file, invalid env value is ignored rather than crashing).
+- [ ] Not yet done: actually confirming the GHCR-published multi-arch image runs correctly on real amd64/arm64 hardware — the workflow run itself needs to be triggered and watched (next step), and even a green CI run only proves the *build* succeeds on both architectures via QEMU emulation, not that someone has pulled and run the published image on real hardware of each kind.
 
 ## Phase 9 — *arr Suite Integration (Radarr / Sonarr / Lidarr / Prowlarr / Ombi)
 

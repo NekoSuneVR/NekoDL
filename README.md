@@ -192,12 +192,36 @@ This is treated as a hard rule during Web GUI development (Phase 6 in [TODO.md](
 
 ## Quick Start
 
-> Not available yet — this section will be filled in once the core engine and Docker image ship. Planned shape:
+**Build it yourself:**
 
 ```bash
-docker compose up -d
+git clone https://github.com/NekoSuneVR/NekoDL.git
+cd NekoDL
+docker compose up -d --build
 # then open http://localhost:6900
 ```
+
+**Or pull the pre-built multi-arch image** (linux/amd64 and linux/arm64, built by [.github/workflows/docker.yml](.github/workflows/docker.yml)):
+
+```bash
+docker pull ghcr.io/nekosunevr/nekodl:latest
+docker run -p 6900:6900 -v nekodl-data:/data ghcr.io/nekosunevr/nekodl:latest
+```
+
+For torrenting, use `docker-compose.vpn.yml` instead — it routes NekoDL through a [gluetun](https://github.com/qdm12/gluetun) VPN sidecar at the network level, on top of the app's own per-task kill switch (see the Privacy Model section above). Without it, NekoDL still works for HTTP/one-click-hoster downloads, and will clearly warn (not silently proceed) if you start a torrent with no proxy configured.
+
+The Web GUI is a themed shell right now — the real task list/add-task UI isn't wired up yet (see [TODO.md](TODO.md) Phase 7) — but the REST API is fully usable: `POST /api/v1/tasks` for HTTP/one-click-hoster/MEGA downloads, `POST /api/v1/torrents` for BitTorrent.
+
+**Configuration** is a JSON file (see [nekodl.example.json](nekodl.example.json)) with environment variable overrides on top — handy for Docker without rebuilding or mounting a custom file (precedence: env > file > defaults):
+
+| Variable | Overrides |
+|---|---|
+| `NEKODL_LISTEN_ADDR` | `listen_addr` |
+| `NEKODL_DATA_DIR` | `data_dir` |
+| `NEKODL_LOG_LEVEL` | `log_level` |
+| `NEKODL_API_TOKEN` | `api_token` |
+| `NEKODL_STATIC_DIR` | `static_dir` |
+| `NEKODL_MAX_CONCURRENT_DOWNLOADS` | `max_concurrent_downloads` |
 
 ## Credits
 
