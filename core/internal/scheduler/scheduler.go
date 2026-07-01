@@ -8,6 +8,7 @@
 package scheduler
 
 import (
+	"context"
 	"errors"
 	"sort"
 	"sync"
@@ -36,6 +37,7 @@ type Record struct {
 	AddedAt  time.Time     `json:"added_at"`
 	Status   task.Status   `json:"status"`
 	Progress task.Progress `json:"progress"`
+	Error    string        `json:"error,omitempty"`
 }
 
 type entry struct {
@@ -44,8 +46,15 @@ type entry struct {
 	addedAt time.Time
 }
 
+// errorProvider is an optional capability: engines whose tasks can fail with
+// a specific reason (e.g. httpengine.Task) implement it so that reason
+// surfaces in Record.Error instead of a bare "status: error".
+type errorProvider interface {
+	Err() error
+}
+
 func (e *entry) record() Record {
-	return Record{
+	rec := Record{
 		ID:       e.task.ID(),
 		Engine:   e.task.Engine(),
 		Priority: e.opts.Priority,
@@ -53,6 +62,12 @@ func (e *entry) record() Record {
 		Status:   e.task.Status(),
 		Progress: e.task.Progress(),
 	}
+	if ep, ok := e.task.(errorProvider); ok {
+		if err := ep.Err(); err != nil {
+			rec.Error = err.Error()
+		}
+	}
+	return rec
 }
 
 // Scheduler manages a set of in-memory tasks. It is safe for concurrent use.
@@ -94,7 +109,10 @@ func (s *Scheduler) Records() []Record {
 		records = append(records, e.record())
 	}
 	sort.Slice(records, func(i, j int) bool {
-		return records[i].AddedAt.Before(records[j].AddedAt)
+		if !records[i].AddedAt.Equal(records[j].AddedAt) {
+			return records[i].AddedAt.Before(records[j].AddedAt)
+		}
+		return records[i].ID < records[j].ID // deterministic tiebreak for same-instant inserts
 	})
 	return records
 }
@@ -183,7 +201,14 @@ func (s *Scheduler) rescheduleLocked() {
 		if runnable[i].opts.Priority != runnable[j].opts.Priority {
 			return runnable[i].opts.Priority > runnable[j].opts.Priority
 		}
-		return runnable[i].addedAt.Before(runnable[j].addedAt)
+		if !runnable[i].addedAt.Equal(runnable[j].addedAt) {
+			return runnable[i].addedAt.Before(runnable[j].addedAt)
+		}
+		// Deterministic tiebreak: without this, two tasks enqueued close enough
+		// together to get the same timestamp would have their relative order
+		// depend on Go's randomized map iteration order feeding into this sort,
+		// making "which task runs" flip randomly between otherwise-identical runs.
+		return runnable[i].task.ID() < runnable[j].task.ID()
 	})
 
 	for i, e := range runnable {
@@ -193,6 +218,27 @@ func (s *Scheduler) rescheduleLocked() {
 			}
 		} else if e.task.Status() != task.StatusPaused {
 			_ = e.task.Pause()
+		}
+	}
+}
+
+// PersistPeriodically saves a snapshot every interval until ctx is done.
+// This matters because tasks change status on their own in the background
+// (a download completing, erroring, etc.) without calling back into the
+// Scheduler — without this, the on-disk snapshot only updates on the next
+// explicit Enqueue/Pause/Resume/Cancel/Remove call, which may never come
+// for a task that just runs to completion by itself.
+func (s *Scheduler) PersistPeriodically(ctx context.Context, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.mu.Lock()
+			s.persistLocked()
+			s.mu.Unlock()
 		}
 	}
 }

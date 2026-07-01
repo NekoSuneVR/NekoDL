@@ -7,17 +7,20 @@ import (
 	"net/http"
 
 	"github.com/NekoSuneVR/NekoDL/core/internal/config"
+	"github.com/NekoSuneVR/NekoDL/core/internal/resolver"
 	"github.com/NekoSuneVR/NekoDL/core/internal/scheduler"
 )
 
 type Server struct {
 	cfg       config.Config
 	scheduler *scheduler.Scheduler
+	resolvers *resolver.Registry
 	mux       *http.ServeMux
 }
 
-func New(cfg config.Config, sched *scheduler.Scheduler) *Server {
-	s := &Server{cfg: cfg, scheduler: sched, mux: http.NewServeMux()}
+// New builds the API server. resolvers may be nil to disable one-click-hoster resolution.
+func New(cfg config.Config, sched *scheduler.Scheduler, resolvers *resolver.Registry) *Server {
+	s := &Server{cfg: cfg, scheduler: sched, resolvers: resolvers, mux: http.NewServeMux()}
 	s.routes()
 	return s
 }
@@ -30,6 +33,7 @@ func (s *Server) routes() {
 	// Liveness check stays unauthenticated so external health monitors don't need the API token.
 	s.mux.HandleFunc("/health", s.handleHealth)
 
+	s.mux.HandleFunc("POST /api/v1/tasks", s.requireAuth(s.handleAddTask))
 	s.mux.HandleFunc("GET /api/v1/tasks", s.requireAuth(s.handleListTasks))
 	s.mux.HandleFunc("GET /api/v1/tasks/{id}", s.requireAuth(s.handleGetTask))
 	s.mux.HandleFunc("POST /api/v1/tasks/{id}/pause", s.requireAuth(s.handlePauseTask))

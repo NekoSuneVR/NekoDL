@@ -1,7 +1,9 @@
 package scheduler
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/NekoSuneVR/NekoDL/core/internal/task"
 )
@@ -102,6 +104,33 @@ func TestRemove(t *testing.T) {
 	if _, err := s.Get("a"); err != ErrTaskNotFound {
 		t.Fatalf("expected task to be gone after Remove, got %v", err)
 	}
+}
+
+func TestPersistPeriodicallyCapturesOutOfBandStatusChanges(t *testing.T) {
+	dir := t.TempDir()
+	store := NewStore(dir)
+	s := New(0, store)
+
+	ft := newFakeTask("a")
+	s.Enqueue(ft, Options{})
+
+	// Simulate the task completing entirely on its own — exactly what a real
+	// engine's background goroutine does — without going through any
+	// Scheduler method that would normally trigger a save.
+	ft.status = task.StatusComplete
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.PersistPeriodically(ctx, 20*time.Millisecond)
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if records, err := store.Load(); err == nil && len(records) == 1 && records[0].Status == task.StatusComplete {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("expected the periodic persister to eventually pick up the task's out-of-band status change")
 }
 
 func TestStoreRoundTrip(t *testing.T) {

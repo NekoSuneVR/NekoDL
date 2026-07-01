@@ -12,6 +12,7 @@ import (
 
 	"github.com/NekoSuneVR/NekoDL/core/internal/api"
 	"github.com/NekoSuneVR/NekoDL/core/internal/config"
+	"github.com/NekoSuneVR/NekoDL/core/internal/resolver"
 	"github.com/NekoSuneVR/NekoDL/core/internal/scheduler"
 )
 
@@ -29,8 +30,13 @@ func main() {
 
 	store := scheduler.NewStore(cfg.DataDir)
 	sched := scheduler.New(cfg.MaxConcurrentDownloads, store)
+	resolvers := resolver.NewRegistry(resolver.Dropbox{}, resolver.Pixeldrain{})
 
-	srv := api.New(cfg, sched)
+	persistCtx, stopPersisting := context.WithCancel(context.Background())
+	defer stopPersisting()
+	go sched.PersistPeriodically(persistCtx, 2*time.Second)
+
+	srv := api.New(cfg, sched, resolvers)
 	httpServer := &http.Server{
 		Addr:    cfg.ListenAddr,
 		Handler: srv.Handler(),

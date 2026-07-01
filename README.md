@@ -4,7 +4,7 @@
 
 Where aria2 gives you HTTP/FTP/BitTorrent/Metalink, NekoDL gives you that plus **first-class yt-dlp support**, **VPN/proxy-shielded torrenting**, and a **BoothDownloader engine** for grabbing your owned Booth.pm assets — all from one dashboard, one API, and one Docker container.
 
-> ⚠️ **Status: pre-alpha / planning stage.** This repo currently contains the project plan (see [TODO.md](TODO.md)). No code has landed yet. See [CHANGELOG.md](CHANGELOG.md) for what's actually shipped.
+> ⚠️ **Status: pre-alpha.** The core service (`core/`) has a working scheduler, REST API, real WebSocket progress feed, and a segmented/resumable HTTP download engine with Dropbox/Pixeldrain resolvers — all build- and test-verified. The Web GUI is a styled shell with no real functionality wired up yet, and most engines (BitTorrent, yt-dlp, Booth, Plex ripper, FTP, most one-click hosters) don't exist yet. See [TODO.md](TODO.md) for exactly what's done vs. planned per phase, and [CHANGELOG.md](CHANGELOG.md) for the detailed history.
 
 ---
 
@@ -26,8 +26,8 @@ NekoDL keeps the parts of aria2's design that work well (a lightweight RPC-drive
 - 📡 **NekoDL Channels** — a from-scratch, NekoDL-native take on [Tunarr](https://tunarr.com/): build live "TV channels" out of your Plex or Jellyfin library, schedule a lineup, and tune in via M3U/IPTV or a spoofed HDHomeRun tuner.
 - 🛍️ **BoothDownloader engine** — wraps [Myrkie/BoothDownloader](https://github.com/Myrkie/BoothDownloader) to pull owned images/files/gifts/orders from [Booth.pm](https://booth.pm) using your account cookie/token.
 - 🎥 **Plex ripping engine** — [Pledo](https://github.com/nekosuneprojects/pledo)-inspired: log in via plex.tv (no password typed into NekoDL), browse any Plex server you have access to, and download movies/TV/playlists directly, including multiple resolution/codec versions.
-- 🌐 **HTTP/HTTPS/FTP** downloads with multi-connection segmented fetching, resume, and checksum verification.
-- 📁 **One-click hoster support** — Dropbox, Pixeldrain, Catbox.moe, Google Drive, Mediafire, and Mega.nz via a pluggable site resolver (same pattern as engines), with more hosts addable over time.
+- 🌐 **HTTP/HTTPS** downloads with multi-connection segmented fetching, resume, checksum verification, retry/backoff, and mirror URLs — **built, tested, and live-verified**. FTP support is still planned.
+- 📁 **One-click hoster support** — Dropbox and Pixeldrain resolvers are built and tested; Catbox.moe, Google Drive, Mediafire, Gofile, and Mega.nz are planned via the same pluggable resolver interface (see TODO.md for per-site difficulty and status).
 - 🖥️ **Web GUI dashboard** — queue management, live speed/progress graphs, per-download proxy overrides, drag-and-drop `.torrent`/cookie files.
 - 🎨 **Modern dark, green-themed UI** — Tailwind CSS design system, fully custom toast/alert components and modal dialogs for prompts/confirmations. No native `alert()`/`confirm()`/`prompt()` anywhere in the app.
 - 🔌 **JSON-RPC / REST / WebSocket API** — scriptable like aria2, with an aria2-compatible RPC shim so existing tools (e.g. browser "send to aria2" extensions, and the *arr suite below) keep working.
