@@ -86,13 +86,15 @@ Difficulty varies a lot by site — being honest about that up front:
 
 ## Phase 4 — yt-dlp Engine ("fixed yt-dlp")
 
-- [ ] Bundle/pin a specific yt-dlp release in the Docker image
-- [ ] Auto-update mechanism for yt-dlp binary (checked on a schedule, not silently mid-download)
-- [ ] Maintain NekoDL's patch set for upstream bugs/site breakage not yet merged — document the patching workflow (fork + cherry-pick vs local patch files)
-- [ ] Wrap yt-dlp as a managed subprocess: parse its progress output into NekoDL's task progress model
-- [ ] Support common yt-dlp options via the UI/API: format selection, playlist handling, subtitles, output templates
-- [ ] Route yt-dlp downloads through a proxy when explicitly configured per-task (off by default, unlike torrents)
-- [ ] Cookie import support (for sites requiring login, same UX pattern as the Booth engine)
+- [x] Bundle/pin a specific yt-dlp release in the Docker image — `Dockerfile` installs `yt-dlp==${YTDLP_VERSION}` (currently `2026.06.09`) via pip into the Alpine runtime stage, alongside `python3` and `ffmpeg` (needed for format merging). Pinned deliberately: the periodic update check below only *reports* a newer version exists, it never silently swaps the binary a running deployment relies on.
+- [x] Auto-update mechanism for yt-dlp binary (checked on a schedule, not silently mid-download) — `core/internal/ytdlpengine/update.go`'s `RunPeriodicUpdateCheck`, wired into `main.go` on a 24h ticker, fully independent of task/download lifecycles. It only runs `yt-dlp -U` and logs the result; bumping the actual bundled version still requires a human to update `YTDLP_VERSION` and rebuild the image.
+- [ ] Maintain NekoDL's patch set for upstream bugs/site breakage not yet merged — **workflow documented, no patches needed yet**: NekoDL runs stock yt-dlp releases pinned by `YTDLP_VERSION`, no fork or local patches exist today. If/when one is needed, the plan is a local patch file under `docker/patches/yt-dlp/*.patch` applied with `pip install` from a locally-built wheel in the Docker build stage (not a long-lived fork, since upstream yt-dlp ships extractor fixes almost daily and a fork would fall behind fast); a full fork+cherry-pick model is the fallback only if patches accumulate significantly.
+- [x] Wrap yt-dlp as a managed subprocess: parse its progress output into NekoDL's task progress model — `core/internal/ytdlpengine/task.go` + `progress.go`. Runs yt-dlp with `--newline --progress-template "download:%(progress)j"`, confirmed against a real download (real JSON lines captured into `progress_test.go`'s fixture) that `--newline` is required or progress lines are `\r`-separated instead of `\n`-separated.
+- [x] Support common yt-dlp options via the UI/API: format selection, playlist handling, subtitles, output templates — `POST /api/v1/ytdlp` (`core/internal/api/addytdlp.go`) accepts `format`, `no_playlist`, `subtitles`, `output_template`. **Not yet wired into the web UI** — `AddTaskModal.tsx` doesn't have a yt-dlp tab yet; this is the one item still open below.
+- [x] Route yt-dlp downloads through a proxy when explicitly configured per-task (off by default, unlike torrents) — `Options.ProxyAddr`, passed to yt-dlp as `--proxy`. Deliberately unwarned (no kill-switch/leak-check like torrents get): yt-dlp traffic isn't P2P, so there's no equivalent "your IP is visible to peers" exposure — see `addytdlp.go`'s doc comment.
+- [x] Cookie import support (for sites requiring login, same UX pattern as the Booth engine) — `CookiesFileBase64` in the API request, decoded and written to `<destDir>/cookies.txt` with `0o600` perms, passed to yt-dlp as `--cookies`.
+
+Verified with real subprocess integration tests in `core/internal/ytdlpengine/task_test.go` and `update_test.go` (10/10 passing, including a real ~20s download of a real, small, stable YouTube video and a real `yt-dlp -U` call) — gated behind a `findRealYtDlp` skip-helper so `go test ./...` still passes in environments without yt-dlp installed. **Not done**: web UI wiring (format/playlist/subtitles/cookies inputs in `AddTaskModal.tsx`) and the YouTube-subscription feature set below.
 
 ### YouTube subscriptions (Youtarr-inspired)
 

@@ -23,7 +23,15 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /out/nekodl 
 
 # ---- runtime ----
 FROM alpine:3.20
-RUN apk add --no-cache ca-certificates su-exec && \
+# Pinned, not "latest" — an unannounced yt-dlp upgrade mid-deployment could
+# change CLI flags or the JSON progress fields ytdlpengine parses. The
+# periodic background update check (main.go) only *reports* that a newer
+# version exists; bumping this ARG is the deliberate act that actually
+# changes the bundled binary. See TODO.md Phase 4 for the patch workflow.
+ARG YTDLP_VERSION=2026.06.09
+RUN apk add --no-cache ca-certificates su-exec python3 ffmpeg && \
+    python3 -m ensurepip && \
+    pip3 install --no-cache-dir --break-system-packages "yt-dlp==${YTDLP_VERSION}" && \
     addgroup -S nekodl && adduser -S nekodl -G nekodl
 WORKDIR /app
 COPY --from=core-builder /out/nekodl ./nekodl

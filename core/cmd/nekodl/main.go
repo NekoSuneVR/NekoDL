@@ -15,6 +15,7 @@ import (
 	"github.com/NekoSuneVR/NekoDL/core/internal/resolver"
 	"github.com/NekoSuneVR/NekoDL/core/internal/scheduler"
 	"github.com/NekoSuneVR/NekoDL/core/internal/settings"
+	"github.com/NekoSuneVR/NekoDL/core/internal/ytdlpengine"
 )
 
 func main() {
@@ -41,6 +42,18 @@ func main() {
 	persistCtx, stopPersisting := context.WithCancel(context.Background())
 	defer stopPersisting()
 	go sched.PersistPeriodically(persistCtx, 2*time.Second)
+
+	// Independent of any task/download lifecycle by design — never
+	// triggered mid-download, just a background check on its own schedule.
+	updateCtx, stopUpdateChecks := context.WithCancel(context.Background())
+	defer stopUpdateChecks()
+	go ytdlpengine.RunPeriodicUpdateCheck(updateCtx, "", 24*time.Hour, func(output string, err error) {
+		if err != nil {
+			log.Printf("yt-dlp update check failed: %v", err)
+			return
+		}
+		log.Printf("yt-dlp update check: %s", output)
+	})
 
 	srv := api.New(cfg, sched, resolvers, settingsStore)
 	httpServer := &http.Server{
