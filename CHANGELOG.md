@@ -44,9 +44,11 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Added `NEKODL_*` environment variable config overrides (`core/internal/config`), precedence env > file > defaults — 4 unit tests.
 - Shipped Docker support: a multi-stage `Dockerfile` (web build → Go cross-compile via buildx `TARGETOS`/`TARGETARCH` → slim non-root Alpine runtime), `docker-compose.yml` (standalone) and `docker-compose.vpn.yml` (gluetun sidecar via `network_mode: "service:gluetun"`), a `HEALTHCHECK`, and a GitHub Actions workflow (`.github/workflows/docker.yml`) publishing a multi-arch (`linux/amd64,linux/arm64`) image to `ghcr.io/nekosunevr/nekodl` on push to `main`.
 
+- Watched the Docker workflow's first real run (triggered by the push above) to completion via `gh run watch`: succeeded in 9m23s, and the pushed manifest list genuinely includes both `linux/amd64` and `linux/arm64` digests — confirmed by reading the build log, not just trusting a green checkmark. `ghcr.io/nekosunevr/nekodl:latest` is live.
+
 ### Notes
 - FTP support is still not implemented — see [TODO.md](TODO.md) Phase 2.
 - No yt-dlp, Booth, or Plex-ripper engines exist yet.
-- The Docker workflow hasn't been triggered/watched yet as of this entry — see the next entry for whether it actually succeeded.
+- CI proves the image *builds* correctly for both architectures (via QEMU emulation on an amd64 runner) — nobody has pulled and run it on real arm64 hardware yet.
 
 [Unreleased]: https://github.com/NekoSuneVR/NekoDL
