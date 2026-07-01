@@ -1,0 +1,5 @@
+# Force LF regardless of local git config — a CRLF shebang line breaks a
+# shell script inside a Linux container ("bad interpreter" or similar),
+# and this repo is developed on Windows but built/run on Linux.
+*.sh text eol=lf
+Dockerfile text eol=lf

@@ -14,6 +14,7 @@ import (
 	"github.com/NekoSuneVR/NekoDL/core/internal/config"
 	"github.com/NekoSuneVR/NekoDL/core/internal/resolver"
 	"github.com/NekoSuneVR/NekoDL/core/internal/scheduler"
+	"github.com/NekoSuneVR/NekoDL/core/internal/settings"
 )
 
 func main() {
@@ -32,11 +33,16 @@ func main() {
 	sched := scheduler.New(cfg.MaxConcurrentDownloads, store)
 	resolvers := resolver.NewRegistry(resolver.Dropbox{}, resolver.Pixeldrain{}, resolver.GoogleDrive{}, resolver.Mediafire{})
 
+	settingsStore, err := settings.NewStore(cfg.DataDir)
+	if err != nil {
+		log.Fatalf("failed to load settings: %v", err)
+	}
+
 	persistCtx, stopPersisting := context.WithCancel(context.Background())
 	defer stopPersisting()
 	go sched.PersistPeriodically(persistCtx, 2*time.Second)
 
-	srv := api.New(cfg, sched, resolvers)
+	srv := api.New(cfg, sched, resolvers, settingsStore)
 	httpServer := &http.Server{
 		Addr:    cfg.ListenAddr,
 		Handler: srv.Handler(),

@@ -6,6 +6,7 @@ interface SidebarProps {
   counts: Record<Category, number>
   connected: boolean
   onOpenAuth: () => void
+  onOpenSettings: () => void
 }
 
 const NAV_ITEMS: { category: Category; label: string; icon: string }[] = [
@@ -14,7 +15,14 @@ const NAV_ITEMS: { category: Category; label: string; icon: string }[] = [
   { category: 'finished', label: 'Finished / Stopped', icon: '✓' },
 ]
 
-export function Sidebar({ category, onCategoryChange, counts, connected, onOpenAuth }: SidebarProps) {
+export function Sidebar({
+  category,
+  onCategoryChange,
+  counts,
+  connected,
+  onOpenAuth,
+  onOpenSettings,
+}: SidebarProps) {
   return (
     <aside className="flex w-60 flex-shrink-0 flex-col border-r border-surface-border bg-surface-900">
       <div className="border-b border-surface-border px-5 py-4">
@@ -58,6 +66,14 @@ export function Sidebar({ category, onCategoryChange, counts, connected, onOpenA
         >
           <span aria-hidden="true">🔑</span>
           API Token
+        </button>
+        <button
+          type="button"
+          onClick={onOpenSettings}
+          className="flex w-full items-center gap-2 px-5 py-2 text-sm text-text-primary hover:bg-surface-800"
+        >
+          <span aria-hidden="true">⚙</span>
+          Settings
         </button>
       </nav>
 

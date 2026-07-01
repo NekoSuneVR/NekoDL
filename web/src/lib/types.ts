@@ -26,3 +26,8 @@ export interface TaskRecord {
 export interface ApiError {
   error: string
 }
+
+export interface ServerSettings {
+  allow_torrents: boolean
+  require_proxy_for_torrents: boolean
+}

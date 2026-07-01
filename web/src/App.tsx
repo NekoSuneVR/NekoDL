@@ -6,6 +6,7 @@ import { TaskList } from './components/TaskList'
 import { StatusBar } from './components/StatusBar'
 import { AddTaskModal } from './components/AddTaskModal'
 import { AuthPrompt } from './components/AuthPrompt'
+import { SettingsModal } from './components/SettingsModal'
 import { Modal } from './components/Modal'
 import { Button } from './components/ui/Button'
 import { useToast } from './components/Toast'
@@ -21,6 +22,7 @@ function App() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [addOpen, setAddOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -66,6 +68,7 @@ function App() {
           counts={counts}
           connected={connected}
           onOpenAuth={() => setAuthOpen(true)}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
       </div>
 
@@ -113,6 +116,7 @@ function App() {
       </div>
 
       <AddTaskModal open={addOpen} onClose={() => setAddOpen(false)} onAdded={refresh} />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <AuthPrompt
         open={authOpen}
         onClose={() => setAuthOpen(false)}

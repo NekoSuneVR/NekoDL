@@ -29,10 +29,29 @@ type addTorrentRequest struct {
 // URI or an uploaded .torrent file's bytes (base64-encoded, since JSON
 // can't carry raw binary). See torrentengine's package doc for the privacy
 // model (SOCKS5 binding, kill switch) this wires up.
+//
+// Settings enforcement happens here, not inside torrentengine: whether a
+// torrent is allowed to run at all, or is allowed to run without a proxy,
+// is server policy, not something the engine itself should know about.
+// The default policy (settings.Default()) permits both — running without a
+// proxy just gets a warning (Task.Warning), never a rejection, unless the
+// user explicitly turns RequireProxyForTorrents on.
 func (s *Server) handleAddTorrent(w http.ResponseWriter, r *http.Request) {
 	var req addTorrentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON body"})
+		return
+	}
+
+	policy := s.settings.Get()
+	if !policy.AllowTorrents {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "torrent downloads are disabled in settings"})
+		return
+	}
+	if policy.RequireProxyForTorrents && req.ProxyAddr == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "settings require a proxy for torrents — set proxy_addr, or turn off \"require proxy for torrents\" in settings",
+		})
 		return
 	}
 

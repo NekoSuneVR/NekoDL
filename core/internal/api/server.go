@@ -9,18 +9,20 @@ import (
 	"github.com/NekoSuneVR/NekoDL/core/internal/config"
 	"github.com/NekoSuneVR/NekoDL/core/internal/resolver"
 	"github.com/NekoSuneVR/NekoDL/core/internal/scheduler"
+	"github.com/NekoSuneVR/NekoDL/core/internal/settings"
 )
 
 type Server struct {
 	cfg       config.Config
 	scheduler *scheduler.Scheduler
 	resolvers *resolver.Registry
+	settings  *settings.Store
 	mux       *http.ServeMux
 }
 
 // New builds the API server. resolvers may be nil to disable one-click-hoster resolution.
-func New(cfg config.Config, sched *scheduler.Scheduler, resolvers *resolver.Registry) *Server {
-	s := &Server{cfg: cfg, scheduler: sched, resolvers: resolvers, mux: http.NewServeMux()}
+func New(cfg config.Config, sched *scheduler.Scheduler, resolvers *resolver.Registry, settingsStore *settings.Store) *Server {
+	s := &Server{cfg: cfg, scheduler: sched, resolvers: resolvers, settings: settingsStore, mux: http.NewServeMux()}
 	s.routes()
 	return s
 }
@@ -42,6 +44,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/v1/tasks/{id}/cancel", s.requireAuth(s.handleCancelTask))
 	s.mux.HandleFunc("DELETE /api/v1/tasks/{id}", s.requireAuth(s.handleRemoveTask))
 	s.mux.HandleFunc("GET /api/v1/events", s.requireAuthWS(s.handleEvents))
+	s.mux.HandleFunc("GET /api/v1/settings", s.requireAuth(s.handleGetSettings))
+	s.mux.HandleFunc("PUT /api/v1/settings", s.requireAuth(s.handlePutSettings))
 
 	if s.cfg.StaticDir != "" {
 		s.mux.Handle("/", staticHandler(s.cfg.StaticDir))

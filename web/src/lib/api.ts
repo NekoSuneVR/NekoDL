@@ -1,4 +1,4 @@
-import type { TaskRecord } from './types'
+import type { ServerSettings, TaskRecord } from './types'
 
 // Same-origin in production (the Go server serves this SPA and the API
 // together — see core/internal/api/static.go). VITE_API_BASE_URL lets
@@ -98,6 +98,14 @@ export function cancelTask(id: string): Promise<void> {
 
 export function removeTask(id: string): Promise<void> {
   return request(`/api/v1/tasks/${id}`, { method: 'DELETE' })
+}
+
+export function getSettings(): Promise<ServerSettings> {
+  return request<ServerSettings>('/api/v1/settings')
+}
+
+export function putSettings(next: ServerSettings): Promise<ServerSettings> {
+  return request<ServerSettings>('/api/v1/settings', { method: 'PUT', body: JSON.stringify(next) })
 }
 
 // eventsURL builds the live-updates WebSocket URL. The token travels as a

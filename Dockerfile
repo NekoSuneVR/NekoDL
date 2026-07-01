@@ -23,17 +23,20 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /out/nekodl 
 
 # ---- runtime ----
 FROM alpine:3.20
-RUN apk add --no-cache ca-certificates && \
+RUN apk add --no-cache ca-certificates su-exec && \
     addgroup -S nekodl && adduser -S nekodl -G nekodl
 WORKDIR /app
 COPY --from=core-builder /out/nekodl ./nekodl
 COPY --from=web-builder /web/dist ./web/dist
 COPY nekodl.docker.json ./nekodl.json
-RUN mkdir -p /data && chown -R nekodl:nekodl /app /data
-USER nekodl
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh && mkdir -p /data && chown -R nekodl:nekodl /app /data
 VOLUME ["/data"]
 EXPOSE 6900
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
   CMD wget -q -O- http://127.0.0.1:6900/health || exit 1
-ENTRYPOINT ["./nekodl"]
-CMD ["-config", "/app/nekodl.json"]
+# Stays root here on purpose — the entrypoint fixes /data ownership (which a
+# mounted volume can override regardless of what the image set) and then
+# drops to the nekodl user itself via su-exec before running anything else.
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["./nekodl", "-config", "/app/nekodl.json"]
