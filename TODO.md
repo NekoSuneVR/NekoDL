@@ -19,13 +19,13 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Phase 1 — Core Engine Skeleton
 
-- [ ] Scaffold core service (HTTP server, config loader, logging)
-- [ ] Define the internal `Task` interface (Add/Pause/Resume/Cancel/Remove/Progress/Status) shared by all download engines
+- [x] Scaffold core service — minimal Go module (`core/`) with a JSON config loader, stdlib `net/http` server, `/health` endpoint, and graceful shutdown (`core/cmd/nekodl`, `core/internal/config`, `core/internal/api`). **Unverified**: written without a local Go toolchain available to run `go build`/`go vet` — needs a compile check before anything is layered on top.
+- [x] Define the internal `Task` interface (`core/internal/task/task.go`) — settled on `Pause/Resume/Cancel/Remove/Progress/Status`; dropped `Add` from the interface itself since adding is a scheduler operation that constructs a task, not a method on an existing one.
 - [ ] Implement task queue + scheduler (max concurrent downloads, per-task priority, bandwidth limits — global and per-task, like aria2's `--max-overall-download-limit`)
 - [ ] Implement persistent task/session storage (survive restarts, like aria2's `--save-session`)
-- [ ] Define REST + WebSocket API contract (task CRUD, live progress events)
+- [ ] Define REST + WebSocket API contract (task CRUD, live progress events) — only `/health` exists so far
 - [ ] Basic auth / API token support for the API
-- [ ] Unit tests for scheduler and task lifecycle
+- [ ] Unit tests for scheduler and task lifecycle — blocked on a Go toolchain being available to run them
 
 ## Phase 2 — HTTP/FTP Engine
 

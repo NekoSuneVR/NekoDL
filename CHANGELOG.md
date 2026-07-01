@@ -18,8 +18,11 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Planned "NekoDL Channels": a from-scratch, Tunarr-inspired live-TV module that schedules and streams existing Plex/Jellyfin library content as virtual channels (M3U + spoofed HDHomeRun tuner output).
 - Planned Plex ripping engine, inspired by [Pledo](https://github.com/nekosuneprojects/pledo): download movies/TV/playlists directly from an accessible Plex server via plex.tv login.
 - Documented the Ombi request flow: Ombi → Radarr/Sonarr/Lidarr → NekoDL → Tdarr → Plex/Jellyfin, with no direct NekoDL↔Ombi API integration planned (Ombi already talks to the *arr apps and media servers directly).
+- Recorded Phase 0 decisions: MIT license, Go core, JSON config (`nekodl.json`) for v1, monorepo layout (`core/`, `web/`, `docker/`), BoothDownloader invoked by shelling out to its CLI.
+- Added `LICENSE` (MIT) and `.gitignore`.
+- Scaffolded the Go core skeleton (`core/`): JSON config loader, stdlib HTTP server with a `/health` endpoint, graceful shutdown, and the internal `Task` interface that every download engine will implement. Not yet build-verified — no Go toolchain was available in this environment to run `go build`/`go vet`.
 
 ### Notes
-- No source code yet — see [TODO.md](TODO.md) for the phased build plan and open technical decisions.
+- Beyond the core skeleton above, no download engines, scheduler, or Web GUI exist yet — see [TODO.md](TODO.md) for the phased build plan.
 
-[Unreleased]: https://github.com/NekoSuneVRAPPS/NekoDL
+[Unreleased]: https://github.com/NekoSuneVR/NekoDL
