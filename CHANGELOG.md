@@ -20,15 +20,15 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Documented the Ombi request flow: Ombi → Radarr/Sonarr/Lidarr → NekoDL → Tdarr → Plex/Jellyfin, with no direct NekoDL↔Ombi API integration planned (Ombi already talks to the *arr apps and media servers directly).
 - Recorded Phase 0 decisions: MIT license, Go core, JSON config (`nekodl.json`) for v1, monorepo layout (`core/`, `web/`, `docker/`), BoothDownloader invoked by shelling out to its CLI.
 - Added `LICENSE` (MIT) and `.gitignore`.
-- Scaffolded the Go core skeleton (`core/`): JSON config loader, stdlib HTTP server with a `/health` endpoint, graceful shutdown, and the internal `Task` interface that every download engine will implement. Not yet build-verified — no Go toolchain was available in this environment to run `go build`/`go vet`.
+- Scaffolded the Go core skeleton (`core/`): JSON config loader, stdlib HTTP server with a `/health` endpoint, graceful shutdown, and the internal `Task` interface that every download engine will implement.
 - Scaffolded the web dashboard (`web/`): Vite + React + TypeScript + Tailwind CSS v4, dark/green design tokens, and working `ToastProvider`/`Toast` and `Modal` components with a `no-alert` lint rule enforcing the "no native browser dialogs" constraint. Build-verified with `npm run build` and `npm run lint`.
 
 - Decided VPN provider support strategy: no per-provider integration code in NekoDL. Named providers (ProtonVPN, Mullvad, PIA, AirVPN, IVPN, Windscribe, Surfshark, NordVPN, CyberGhost, ExpressVPN, etc.) work via gluetun's native support; any other provider works via a standard WireGuard/OpenVPN config. Proprietary-protocol VPNs (e.g. Hotspot Shield) and "free" VPN services are explicitly out of scope.
 - Completed the rest of Phase 1 (core skeleton): a task queue/scheduler (`core/internal/scheduler`) with a global concurrency limit and priority ordering, JSON snapshot persistence of task metadata, a REST API for task CRUD using Go 1.22's stdlib method+wildcard routing, bearer-token auth with constant-time comparison, and unit tests covering scheduler/task lifecycle behavior.
-- Live progress events ship as Server-Sent Events (`GET /api/v1/events`) rather than true WebSocket for now — a deliberate, documented substitution (see TODO.md Phase 1) made because hand-rolling RFC 6455 or vendoring a WebSocket dependency wasn't verifiable without a Go toolchain in this environment.
+- Installed a Go 1.26 toolchain (via `winget`) and used it to actually verify everything above: `go build ./...` and `go vet ./...` pass clean, and all 7 scheduler/store unit tests pass.
+- Real WebSocket support for live progress events (`GET /api/v1/events`), hand-rolled against RFC 6455 using only the Go standard library — replacing the earlier Server-Sent Events placeholder. Verified live by running the server and connecting a genuine, independent WebSocket client to it (not just a compile check): the handshake completed and 5 correctly-framed JSON text frames were received before a clean disconnect.
 
 ### Notes
-- None of the Go code in `core/` has been compiled or run — there is no Go toolchain in this environment. Run `go build ./... && go test ./...` from `core/` before relying on any of it. (The web dashboard, by contrast, is build-verified: `npm run build` and `npm run lint` both pass.)
 - No real download engines exist yet (HTTP/FTP, BitTorrent, yt-dlp, Booth, Plex ripper) — the scheduler and API currently have nothing to schedule. See [TODO.md](TODO.md) for the phased build plan.
 
 [Unreleased]: https://github.com/NekoSuneVR/NekoDL
