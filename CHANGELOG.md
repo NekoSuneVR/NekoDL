@@ -61,7 +61,7 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Booth and Plex-ripper engines still don't exist yet — the dashboard has no way to add a Booth-ID download because there's no backend API for it.
 - YouTube channel/playlist subscriptions (the Youtarr-inspired feature set) aren't built — only single-URL yt-dlp downloads work so far.
 - The dashboard's per-task detail view can't show files, torrent peers, or engine logs — no backend endpoint reports any of that yet. It says so in the UI rather than hiding the gap.
-- CI proves the Docker image *builds* correctly for both architectures (via QEMU emulation on an amd64 runner) — nobody has pulled and run it on real arm64 hardware yet, and the new `ytdlp-builder` stage (git clone + wheel build from source) hasn't been re-verified in CI since this change.
+- CI proves the Docker image *builds* correctly for both architectures (via QEMU emulation on an amd64 runner) — nobody has pulled and run it on real arm64 hardware yet. The `ytdlp-builder` rewrite (git clone + patch-apply + wheel build from source, replacing a plain `pip install` that turned out to fail on Alpine — `python3 -m ensurepip` doesn't work there, confirmed by a real failed CI run) *was* re-verified: watched via `gh run watch` to a real success, and confirmed by reading the build log that the pushed manifest list includes both `linux/amd64` and `linux/arm64` provenance. `ghcr.io/nekosunevr/nekodl:latest` is live with this build.
 - The retouched Toggle component was verified by reading its rendered Tailwind classes and re-running the build/lint, not by an actual screenshot — no browser tool was available in this session to visually confirm the fix.
 
 [Unreleased]: https://github.com/NekoSuneVR/NekoDL
