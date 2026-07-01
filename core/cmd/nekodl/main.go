@@ -12,6 +12,7 @@ import (
 
 	"github.com/NekoSuneVR/NekoDL/core/internal/api"
 	"github.com/NekoSuneVR/NekoDL/core/internal/config"
+	"github.com/NekoSuneVR/NekoDL/core/internal/scheduler"
 )
 
 func main() {
@@ -22,8 +23,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
+	if cfg.APIToken == "" {
+		log.Println("warning: api_token is empty in config — the API is unauthenticated")
+	}
 
-	srv := api.New(cfg)
+	store := scheduler.NewStore(cfg.DataDir)
+	sched := scheduler.New(cfg.MaxConcurrentDownloads, store)
+
+	srv := api.New(cfg, sched)
 	httpServer := &http.Server{
 		Addr:    cfg.ListenAddr,
 		Handler: srv.Handler(),

@@ -21,11 +21,12 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 - [x] Scaffold core service — minimal Go module (`core/`) with a JSON config loader, stdlib `net/http` server, `/health` endpoint, and graceful shutdown (`core/cmd/nekodl`, `core/internal/config`, `core/internal/api`). **Unverified**: written without a local Go toolchain available to run `go build`/`go vet` — needs a compile check before anything is layered on top.
 - [x] Define the internal `Task` interface (`core/internal/task/task.go`) — settled on `Pause/Resume/Cancel/Remove/Progress/Status`; dropped `Add` from the interface itself since adding is a scheduler operation that constructs a task, not a method on an existing one.
-- [ ] Implement task queue + scheduler (max concurrent downloads, per-task priority, bandwidth limits — global and per-task, like aria2's `--max-overall-download-limit`)
-- [ ] Implement persistent task/session storage (survive restarts, like aria2's `--save-session`)
-- [ ] Define REST + WebSocket API contract (task CRUD, live progress events) — only `/health` exists so far
-- [ ] Basic auth / API token support for the API
-- [ ] Unit tests for scheduler and task lifecycle — blocked on a Go toolchain being available to run them
+- [x] Implement task queue + scheduler (`core/internal/scheduler`) — global `MaxConcurrentDownloads` limit, priority ordering among pending tasks (higher priority + older first). Per-task `MaxBandwidthBps` is accepted and stored but **not enforced yet** — actual rate limiting is an engine-level concern once a real engine (Phase 2+) exists to throttle.
+- [x] Implement persistent task/session storage (`core/internal/scheduler/store.go`) — JSON snapshot of task records (`tasks.json` in `data_dir`) written on every mutation. Scoped honestly: this persists *metadata* (id/engine/status/progress) for history; it can't reconstruct a live, resumable task on restart since no real engine exists yet to reattach to. Real resume-after-restart is an engine-level concern for later phases.
+- [x] Define REST API contract (`core/internal/api`) — `GET/DELETE /api/v1/tasks[/{id}]`, `POST /api/v1/tasks/{id}/{pause,resume,cancel}`, using Go 1.22's stdlib `net/http.ServeMux` method+wildcard routing (no router dependency needed).
+- [~] Live progress events — implemented as a `GET /api/v1/events` Server-Sent Events stream (1s interval) instead of true WebSocket. Reason: implementing RFC 6455 by hand or vendoring a WebSocket library wasn't worth the risk with no Go toolchain available to verify it compiles/works. Revisit swapping to real WebSocket once a toolchain is confirmed.
+- [x] Basic auth / API token support — `Authorization: Bearer <token>` checked with constant-time comparison (`crypto/subtle`) in `core/internal/api/auth.go`; `/health` stays unauthenticated for external monitors. Empty `api_token` in config disables auth (logged as a warning on startup).
+- [x] Unit tests for scheduler and task lifecycle (`core/internal/scheduler/scheduler_test.go`) — covers enqueue/ordering, concurrency-limit enforcement, priority ordering, not-found errors, remove, and store save/load round-trip, using a test-only fake `task.Task`. **Unrun**: no Go toolchain available in this environment — run `go test ./...` from `core/` to actually verify these pass.
 
 ## Phase 2 — HTTP/FTP Engine
 

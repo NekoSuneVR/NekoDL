@@ -11,13 +11,24 @@ type Config struct {
 	ListenAddr string `json:"listen_addr"`
 	DataDir    string `json:"data_dir"`
 	LogLevel   string `json:"log_level"`
+
+	// APIToken, if set, must be presented as "Authorization: Bearer <token>"
+	// on every API request. Leaving it empty disables auth — fine for local
+	// development, not for anything exposed beyond localhost.
+	APIToken string `json:"api_token"`
+
+	// MaxConcurrentDownloads caps how many tasks the scheduler runs at once,
+	// across all engines. 0 means unlimited.
+	MaxConcurrentDownloads int `json:"max_concurrent_downloads"`
 }
 
 func Default() Config {
 	return Config{
-		ListenAddr: ":6900",
-		DataDir:    "./data",
-		LogLevel:   "info",
+		ListenAddr:             ":6900",
+		DataDir:                "./data",
+		LogLevel:               "info",
+		APIToken:               "",
+		MaxConcurrentDownloads: 5,
 	}
 }
 

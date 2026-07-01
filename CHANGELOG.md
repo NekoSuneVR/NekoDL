@@ -24,8 +24,11 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Scaffolded the web dashboard (`web/`): Vite + React + TypeScript + Tailwind CSS v4, dark/green design tokens, and working `ToastProvider`/`Toast` and `Modal` components with a `no-alert` lint rule enforcing the "no native browser dialogs" constraint. Build-verified with `npm run build` and `npm run lint`.
 
 - Decided VPN provider support strategy: no per-provider integration code in NekoDL. Named providers (ProtonVPN, Mullvad, PIA, AirVPN, IVPN, Windscribe, Surfshark, NordVPN, CyberGhost, ExpressVPN, etc.) work via gluetun's native support; any other provider works via a standard WireGuard/OpenVPN config. Proprietary-protocol VPNs (e.g. Hotspot Shield) and "free" VPN services are explicitly out of scope.
+- Completed the rest of Phase 1 (core skeleton): a task queue/scheduler (`core/internal/scheduler`) with a global concurrency limit and priority ordering, JSON snapshot persistence of task metadata, a REST API for task CRUD using Go 1.22's stdlib method+wildcard routing, bearer-token auth with constant-time comparison, and unit tests covering scheduler/task lifecycle behavior.
+- Live progress events ship as Server-Sent Events (`GET /api/v1/events`) rather than true WebSocket for now — a deliberate, documented substitution (see TODO.md Phase 1) made because hand-rolling RFC 6455 or vendoring a WebSocket dependency wasn't verifiable without a Go toolchain in this environment.
 
 ### Notes
-- Beyond the two scaffolds above, no download engines, scheduler, task queue, or real dashboard views exist yet — see [TODO.md](TODO.md) for the phased build plan.
+- None of the Go code in `core/` has been compiled or run — there is no Go toolchain in this environment. Run `go build ./... && go test ./...` from `core/` before relying on any of it. (The web dashboard, by contrast, is build-verified: `npm run build` and `npm run lint` both pass.)
+- No real download engines exist yet (HTTP/FTP, BitTorrent, yt-dlp, Booth, Plex ripper) — the scheduler and API currently have nothing to schedule. See [TODO.md](TODO.md) for the phased build plan.
 
 [Unreleased]: https://github.com/NekoSuneVR/NekoDL
