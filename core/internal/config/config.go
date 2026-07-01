@@ -27,6 +27,12 @@ type Config struct {
 	// works standalone. Set by the Docker image; not needed for `go run`
 	// during core-only development.
 	StaticDir string `json:"static_dir"`
+
+	// BoothBinaryPath points at a BoothDownloader executable
+	// (github.com/Myrkie/BoothDownloader). Empty disables the Booth engine
+	// entirely (POST /api/v1/booth returns an error) — unlike yt-dlp, there's
+	// no pip-style canonical install location to fall back to guessing.
+	BoothBinaryPath string `json:"booth_binary_path"`
 }
 
 func Default() Config {
@@ -37,6 +43,7 @@ func Default() Config {
 		APIToken:               "",
 		MaxConcurrentDownloads: 5,
 		StaticDir:              "",
+		BoothBinaryPath:        "",
 	}
 }
 
@@ -85,5 +92,8 @@ func applyEnvOverrides(cfg *Config) {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.MaxConcurrentDownloads = n
 		}
+	}
+	if v := os.Getenv("NEKODL_BOOTH_BINARY_PATH"); v != "" {
+		cfg.BoothBinaryPath = v
 	}
 }

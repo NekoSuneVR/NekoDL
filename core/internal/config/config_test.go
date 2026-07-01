@@ -44,6 +44,7 @@ func TestEnvOverridesTakePrecedenceOverFile(t *testing.T) {
 	t.Setenv("NEKODL_API_TOKEN", "envtoken")
 	t.Setenv("NEKODL_MAX_CONCURRENT_DOWNLOADS", "9")
 	t.Setenv("NEKODL_LISTEN_ADDR", ":1234")
+	t.Setenv("NEKODL_BOOTH_BINARY_PATH", "/opt/booth/BoothDownloader")
 
 	cfg, err := Load(path)
 	if err != nil {
@@ -57,6 +58,9 @@ func TestEnvOverridesTakePrecedenceOverFile(t *testing.T) {
 	}
 	if cfg.ListenAddr != ":1234" {
 		t.Fatalf("expected env override for ListenAddr, got %q", cfg.ListenAddr)
+	}
+	if cfg.BoothBinaryPath != "/opt/booth/BoothDownloader" {
+		t.Fatalf("expected env override for BoothBinaryPath, got %q", cfg.BoothBinaryPath)
 	}
 }
 

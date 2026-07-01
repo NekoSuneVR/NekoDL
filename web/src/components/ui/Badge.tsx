@@ -33,4 +33,6 @@ const ENGINE_ICONS: Record<string, string> = {
   http: '🌐',
   torrent: '🧲',
   mega: '🔒',
+  ytdlp: '🎬',
+  booth: '🛍️',
 }

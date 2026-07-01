@@ -87,6 +87,8 @@ export function addTorrent(input: AddTorrentInput): Promise<{ id: string; warnin
 export interface AddYtdlpInput {
   url: string
   format?: string
+  resolution?: string
+  audio_format?: string
   no_playlist?: boolean
   subtitles?: boolean
   output_template?: string
@@ -97,6 +99,18 @@ export interface AddYtdlpInput {
 
 export function addYtdlp(input: AddYtdlpInput): Promise<{ id: string; warning?: string }> {
   return request('/api/v1/ytdlp', { method: 'POST', body: JSON.stringify(input) })
+}
+
+export interface AddBoothInput {
+  input: string
+  cookie?: string
+  auto_zip?: boolean
+  max_retries?: number
+  priority?: number
+}
+
+export function addBooth(input: AddBoothInput): Promise<{ id: string; warning?: string }> {
+  return request('/api/v1/booth', { method: 'POST', body: JSON.stringify(input) })
 }
 
 export function pauseTask(id: string): Promise<void> {

@@ -38,6 +38,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/v1/tasks", s.requireAuth(s.handleAddTask))
 	s.mux.HandleFunc("POST /api/v1/torrents", s.requireAuth(s.handleAddTorrent))
 	s.mux.HandleFunc("POST /api/v1/ytdlp", s.requireAuth(s.handleAddYtdlp))
+	s.mux.HandleFunc("POST /api/v1/booth", s.requireAuth(s.handleAddBooth))
 	s.mux.HandleFunc("GET /api/v1/tasks", s.requireAuth(s.handleListTasks))
 	s.mux.HandleFunc("GET /api/v1/tasks/{id}", s.requireAuth(s.handleGetTask))
 	s.mux.HandleFunc("POST /api/v1/tasks/{id}/pause", s.requireAuth(s.handlePauseTask))

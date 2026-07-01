@@ -68,7 +68,7 @@ func contentDispositionFilename(header string) string {
 }
 
 // decodeRFC5987 decodes the "charset'lang'percent-encoded-value" form used
-// by filename*, e.g. "UTF-8''Terms%20of%20Use.pdf". Only UTF-8 is handled —
+// by filename*, e.g. "UTF-8”Terms%20of%20Use.pdf". Only UTF-8 is handled —
 // the only charset any of NekoDL's resolvers have been observed to send.
 func decodeRFC5987(v string) string {
 	parts := strings.SplitN(v, "'", 3)

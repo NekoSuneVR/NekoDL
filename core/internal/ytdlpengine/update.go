@@ -30,6 +30,20 @@ func CheckForUpdate(ctx context.Context, binaryPath string) (output string, err 
 // subprocess that's already running with the old binary loaded into memory —
 // only subsequent invocations pick up the new version.
 func RunPeriodicUpdateCheck(ctx context.Context, binaryPath string, interval time.Duration, onResult func(output string, err error)) {
+	runPeriodicCheck(ctx, interval, onResult, func(ctx context.Context) (string, error) {
+		return CheckForUpdate(ctx, binaryPath)
+	})
+}
+
+// runPeriodicCheck holds the actual ticker/cancellation loop, with the
+// check itself injected — this is what TestRunPeriodicUpdateCheckStopsWithContext
+// exercises with a fake, instant checkFn. The loop's own logic (does it
+// call the callback, does it stop on cancel) has nothing to do with how
+// long a real "yt-dlp -U" network call takes, and that call was observed
+// live to vary wildly (~1s to well over a minute against GitHub's API) —
+// binding this test's correctness to that variance made it flaky for
+// reasons that had nothing to do with a bug in this loop.
+func runPeriodicCheck(ctx context.Context, interval time.Duration, onResult func(output string, err error), checkFn func(context.Context) (string, error)) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
@@ -37,7 +51,7 @@ func RunPeriodicUpdateCheck(ctx context.Context, binaryPath string, interval tim
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			output, err := CheckForUpdate(ctx, binaryPath)
+			output, err := checkFn(ctx)
 			onResult(output, err)
 		}
 	}

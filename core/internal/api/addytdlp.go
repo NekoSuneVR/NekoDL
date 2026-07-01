@@ -14,6 +14,8 @@ import (
 type addYtdlpRequest struct {
 	URL            string `json:"url"`
 	Format         string `json:"format"`
+	Resolution     string `json:"resolution"`   // e.g. "1080" — ignored if Format is set
+	AudioFormat    string `json:"audio_format"` // e.g. "mp3", "wav" — extracts audio only via yt-dlp's ffmpeg-backed -x
 	NoPlaylist     bool   `json:"no_playlist"`
 	Subtitles      bool   `json:"subtitles"`
 	OutputTemplate string `json:"output_template"`
@@ -67,6 +69,8 @@ func (s *Server) handleAddYtdlp(w http.ResponseWriter, r *http.Request) {
 		URL:            req.URL,
 		DestDir:        destDir,
 		Format:         req.Format,
+		Resolution:     req.Resolution,
+		AudioFormat:    req.AudioFormat,
 		NoPlaylist:     req.NoPlaylist,
 		Subtitles:      req.Subtitles,
 		OutputTemplate: req.OutputTemplate,

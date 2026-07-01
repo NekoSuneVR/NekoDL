@@ -2,8 +2,9 @@ import { useState, type ReactNode } from 'react'
 import { Modal } from './Modal'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
+import { Select } from './ui/Select'
 import { Tabs } from './ui/Tabs'
-import { addTask, addTorrent, addYtdlp } from '../lib/api'
+import { addTask, addTorrent, addYtdlp, addBooth } from '../lib/api'
 import { useToast } from './Toast'
 
 interface AddTaskModalProps {
@@ -40,16 +41,28 @@ export function AddTaskModal({ open, onClose, onAdded }: AddTaskModalProps) {
 
   // yt-dlp-specific options — only sent when "Download with yt-dlp" is on.
   const [ytdlpFormat, setYtdlpFormat] = useState('')
+  const [ytdlpResolution, setYtdlpResolution] = useState('')
+  const [ytdlpAudioFormat, setYtdlpAudioFormat] = useState('')
   const [ytdlpNoPlaylist, setYtdlpNoPlaylist] = useState(false)
   const [ytdlpSubtitles, setYtdlpSubtitles] = useState(false)
   const [ytdlpOutputTemplate, setYtdlpOutputTemplate] = useState('')
   const [ytdlpProxyAddr, setYtdlpProxyAddr] = useState('')
   const [ytdlpCookiesFile, setYtdlpCookiesFile] = useState<File | null>(null)
 
+  // Booth.pm options — its own tab, its own submit path (not part of the
+  // shared Links textarea flow, since BoothDownloader's --booth input
+  // syntax and its cookie/auto-zip options don't fit that shape).
+  const [boothInput, setBoothInput] = useState('')
+  const [boothCookie, setBoothCookie] = useState('')
+  const [boothAutoZip, setBoothAutoZip] = useState(true)
+  const [boothMaxRetries, setBoothMaxRetries] = useState(3)
+
   function reset() {
     setLinks('')
     setTorrentFile(null)
     setYtdlpCookiesFile(null)
+    setBoothInput('')
+    setBoothCookie('')
     setTab('Links')
   }
 
@@ -89,6 +102,8 @@ export function AddTaskModal({ open, onClose, onAdded }: AddTaskModalProps) {
           addYtdlp({
             url: line,
             format: ytdlpFormat || undefined,
+            resolution: ytdlpResolution || undefined,
+            audio_format: ytdlpAudioFormat || undefined,
             no_playlist: ytdlpNoPlaylist,
             subtitles: ytdlpSubtitles,
             output_template: ytdlpOutputTemplate || undefined,
@@ -121,9 +136,36 @@ export function AddTaskModal({ open, onClose, onAdded }: AddTaskModalProps) {
     }
   }
 
+  async function handleBoothSubmit() {
+    if (!boothInput.trim()) {
+      showToast('error', 'Enter a Booth item URL, item ID, or gifts/orders/owned.')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const result = await addBooth({
+        input: boothInput.trim(),
+        cookie: boothCookie || undefined,
+        auto_zip: boothAutoZip,
+        max_retries: boothMaxRetries,
+        priority,
+      })
+      showToast('success', 'Added Booth download.')
+      if (result.warning) showToast('warning', result.warning)
+      reset()
+      onAdded()
+      onClose()
+    } catch (err) {
+      showToast('error', (err as Error).message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <Modal open={open} title="Add download" onClose={onClose}>
-      <Tabs tabs={['Links', 'Options']} active={tab} onChange={setTab} />
+      <Tabs tabs={['Links', 'Booth', 'Options']} active={tab} onChange={setTab} />
 
       {tab === 'Links' ? (
         <div className="space-y-3">
@@ -164,6 +206,49 @@ export function AddTaskModal({ open, onClose, onAdded }: AddTaskModalProps) {
             />
           </div>
         </div>
+      ) : tab === 'Booth' ? (
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs text-text-muted" htmlFor="add-booth-input">
+              Booth.pm item URL, item ID, or gifts / orders / owned
+            </label>
+            <Input
+              id="add-booth-input"
+              placeholder="https://booth.pm/en/items/3807513"
+              value={boothInput}
+              onChange={(e) => setBoothInput(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <LabeledField label="Access token / cookie (required for paid items — leave blank for images only)">
+            <Input
+              type="password"
+              placeholder="leave blank to download anonymously"
+              value={boothCookie}
+              onChange={(e) => setBoothCookie(e.target.value)}
+            />
+          </LabeledField>
+          <LabeledField label="Max retries per file">
+            <Input
+              type="number"
+              min={0}
+              value={boothMaxRetries}
+              onChange={(e) => setBoothMaxRetries(Number(e.target.value))}
+            />
+          </LabeledField>
+          <label className="flex items-center gap-2 text-sm text-text-primary">
+            <input
+              type="checkbox"
+              checked={boothAutoZip}
+              onChange={(e) => setBoothAutoZip(e.target.checked)}
+              className="h-4 w-4 rounded border-surface-border bg-surface-900 accent-brand-500"
+            />
+            Zip each item's downloaded files
+          </label>
+          <p className="text-xs text-text-muted">
+            Uses <a href="https://github.com/Myrkie/BoothDownloader" target="_blank" rel="noreferrer" className="underline hover:text-text-primary">BoothDownloader</a> by Myrkie (Apache-2.0). Item-not-owned or expired-token failures aren't always distinguishable from "found nothing" — see the task's warning, if any, after it completes.
+          </p>
+        </div>
       ) : (
         <div className="space-y-4">
           <fieldset className="space-y-3">
@@ -197,7 +282,24 @@ export function AddTaskModal({ open, onClose, onAdded }: AddTaskModalProps) {
             <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">
               yt-dlp (only applies when "Download with yt-dlp" is checked on the Links tab)
             </legend>
-            <LabeledField label='Format (yt-dlp -f syntax, e.g. "best", blank = yt-dlp default)'>
+            <LabeledField label="Video quality (ignored if a custom format below is set)">
+              <Select value={ytdlpResolution} onChange={(e) => setYtdlpResolution(e.target.value)}>
+                <option value="">Best available</option>
+                <option value="2160">4K (2160p)</option>
+                <option value="1440">1440p</option>
+                <option value="1080">1080p</option>
+                <option value="720">720p</option>
+                <option value="480">480p</option>
+              </Select>
+            </LabeledField>
+            <LabeledField label="Extract audio as (converts with ffmpeg after download)">
+              <Select value={ytdlpAudioFormat} onChange={(e) => setYtdlpAudioFormat(e.target.value)}>
+                <option value="">Keep as video</option>
+                <option value="mp3">MP3</option>
+                <option value="wav">WAV</option>
+              </Select>
+            </LabeledField>
+            <LabeledField label='Custom format override (yt-dlp -f syntax, e.g. "best" — takes priority over Video quality above)'>
               <Input
                 placeholder="best"
                 value={ytdlpFormat}
@@ -293,7 +395,11 @@ export function AddTaskModal({ open, onClose, onAdded }: AddTaskModalProps) {
 
       <div className="mt-6 flex justify-end gap-3">
         <Button onClick={onClose}>Cancel</Button>
-        <Button variant="primary" onClick={handleSubmit} disabled={submitting}>
+        <Button
+          variant="primary"
+          onClick={tab === 'Booth' ? handleBoothSubmit : handleSubmit}
+          disabled={submitting}
+        >
           {submitting ? 'Adding…' : 'Download Now'}
         </Button>
       </div>

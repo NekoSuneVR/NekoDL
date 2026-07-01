@@ -9,6 +9,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"sync"
 	"sync/atomic"
@@ -28,7 +29,26 @@ type Options struct {
 	// (see TODO.md Phase 4); a host install can point this wherever it likes.
 	BinaryPath string
 
-	Format         string // yt-dlp -f, e.g. "best", "bestvideo+bestaudio"
+	// Format is raw yt-dlp -f selector syntax (e.g. "best",
+	// "bestvideo+bestaudio") for advanced use. Takes priority over
+	// Resolution when both are set — an explicit selector always wins over
+	// the convenience option below.
+	Format string
+
+	// Resolution is a convenience cap on video height (e.g. "1080" for
+	// 1080p), building a real -f selector
+	// ("bestvideo[height<=1080]+bestaudio/best[height<=1080]") plus
+	// --merge-output-format mp4, so "give me mp4 at 1080p" doesn't require
+	// knowing yt-dlp's selector syntax. Ignored if Format is set. Empty
+	// means no cap (best available).
+	Resolution string
+
+	// AudioFormat, if set (e.g. "mp3", "wav"), extracts audio only via
+	// yt-dlp's own -x/--audio-format — which shells out to ffmpeg itself to
+	// do the actual mp4→mp3/wav conversion (the Docker image bundles
+	// ffmpeg for exactly this; a host install needs ffmpeg on PATH).
+	AudioFormat string
+
 	NoPlaylist     bool   // --no-playlist: only download the single linked video, not its playlist
 	Subtitles      bool   // --write-subs --write-auto-subs --sub-langs all
 	OutputTemplate string // yt-dlp -o; defaults to "%(title)s.%(ext)s"
@@ -118,8 +138,17 @@ func (t *Task) Progress() task.Progress {
 
 func (t *Task) buildArgs() []string {
 	args := []string{"--newline", "--progress-template", "download:%(progress)j"}
-	if t.opts.Format != "" {
+	switch {
+	case t.opts.Format != "":
 		args = append(args, "-f", t.opts.Format)
+	case t.opts.Resolution != "":
+		args = append(args,
+			"-f", fmt.Sprintf("bestvideo[height<=%s]+bestaudio/best[height<=%s]", t.opts.Resolution, t.opts.Resolution),
+			"--merge-output-format", "mp4",
+		)
+	}
+	if t.opts.AudioFormat != "" {
+		args = append(args, "-x", "--audio-format", t.opts.AudioFormat)
 	}
 	if t.opts.NoPlaylist {
 		args = append(args, "--no-playlist")
@@ -159,6 +188,11 @@ func (t *Task) Resume() error {
 }
 
 func (t *Task) run(ctx context.Context) {
+	if err := os.MkdirAll(t.opts.DestDir, 0o755); err != nil {
+		t.fail(fmt.Errorf("ytdlpengine: creating destination directory: %w", err))
+		return
+	}
+
 	cmd := exec.CommandContext(ctx, t.opts.BinaryPath, t.buildArgs()...)
 	cmd.Dir = t.opts.DestDir
 
