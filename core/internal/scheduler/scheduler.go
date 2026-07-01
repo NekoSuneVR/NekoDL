@@ -38,6 +38,7 @@ type Record struct {
 	Status   task.Status   `json:"status"`
 	Progress task.Progress `json:"progress"`
 	Error    string        `json:"error,omitempty"`
+	Warning  string        `json:"warning,omitempty"`
 }
 
 type entry struct {
@@ -53,6 +54,13 @@ type errorProvider interface {
 	Err() error
 }
 
+// warningProvider is an optional capability for a non-fatal caution about a
+// task — currently only torrentengine.Task's "no proxy configured, your
+// real IP is exposed" notice.
+type warningProvider interface {
+	Warning() string
+}
+
 func (e *entry) record() Record {
 	rec := Record{
 		ID:       e.task.ID(),
@@ -66,6 +74,9 @@ func (e *entry) record() Record {
 		if err := ep.Err(); err != nil {
 			rec.Error = err.Error()
 		}
+	}
+	if wp, ok := e.task.(warningProvider); ok {
+		rec.Warning = wp.Warning()
 	}
 	return rec
 }

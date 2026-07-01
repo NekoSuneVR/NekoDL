@@ -34,6 +34,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/health", s.handleHealth)
 
 	s.mux.HandleFunc("POST /api/v1/tasks", s.requireAuth(s.handleAddTask))
+	s.mux.HandleFunc("POST /api/v1/torrents", s.requireAuth(s.handleAddTorrent))
 	s.mux.HandleFunc("GET /api/v1/tasks", s.requireAuth(s.handleListTasks))
 	s.mux.HandleFunc("GET /api/v1/tasks/{id}", s.requireAuth(s.handleGetTask))
 	s.mux.HandleFunc("POST /api/v1/tasks/{id}/pause", s.requireAuth(s.handlePauseTask))

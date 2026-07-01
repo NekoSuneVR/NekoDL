@@ -20,7 +20,7 @@ NekoDL keeps the parts of aria2's design that work well (a lightweight RPC-drive
 
 ## Planned Features
 
-- 🧲 **BitTorrent engine** — DHT, PEX, magnet links, per-torrent or global SOCKS5/WireGuard proxy binding, and a **kill switch** that pauses torrent traffic if the VPN/proxy drops.
+- 🧲 **BitTorrent engine** — **built and tested**: magnet links + `.torrent` files, DHT/PEX/trackers, per-task SOCKS5 proxy binding, a real kill switch, seeding ratio/time limits, and bandwidth limits. Verified with an actual seed→leech BitTorrent transfer over loopback, a real local SOCKS5 test proxy, and a genuine kill-switch trip test. WireGuard-native binding was evaluated and not implemented (SOCKS5 covers "route through a VPN/proxy" generically); see [TODO.md](TODO.md) Phase 3.
 - 🎬 **yt-dlp integration** — bundled, version-pinned, auto-updating yt-dlp with NekoDL's own patch set for sites/fixes that haven't landed upstream yet ("fixed" yt-dlp).
 - 📺 **YouTube channel/playlist subscriptions** — [Youtarr](https://github.com/DialmasterOrg/Youtarr)-inspired subscription layer on top of the yt-dlp engine: subscribe to channels/playlists, auto-download new uploads on a schedule, SponsorBlock segment removal, NFO/poster metadata generation, age/space-based auto-cleanup, and library-refresh triggers for Plex/Jellyfin/Emby.
 - 📡 **NekoDL Channels** — a from-scratch, NekoDL-native take on [Tunarr](https://tunarr.com/): build live "TV channels" out of your Plex or Jellyfin library, schedule a lineup, and tune in via M3U/IPTV or a spoofed HDHomeRun tuner.

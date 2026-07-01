@@ -48,6 +48,13 @@ type Options struct {
 	DisablePEX bool
 	Seed       bool
 
+	// SeedRatioLimit stops uploading once bytes-uploaded/bytes-downloaded
+	// reaches this ratio. SeedTimeLimit stops uploading once this long has
+	// passed since the download completed. Zero means unlimited for that
+	// dimension. Neither affects downloading — only DisallowDataUpload.
+	SeedRatioLimit float64
+	SeedTimeLimit  time.Duration
+
 	MaxDownloadBps int64
 	MaxUploadBps   int64
 
@@ -63,10 +70,11 @@ type Options struct {
 type Task struct {
 	opts Options
 
-	mu      sync.Mutex
-	status  task.Status
-	lastErr error
-	warning string
+	mu          sync.Mutex
+	status      task.Status
+	lastErr     error
+	warning     string
+	completedAt time.Time
 
 	client *torrent.Client
 	tor    *torrent.Torrent
@@ -218,6 +226,14 @@ func (t *Task) start() error {
 		t.runDownload(ctx, tor)
 	}()
 
+	if t.opts.SeedRatioLimit > 0 || t.opts.SeedTimeLimit > 0 {
+		t.wg.Add(1)
+		go func() {
+			defer t.wg.Done()
+			t.runSeedLimiter(ctx, tor)
+		}()
+	}
+
 	return nil
 }
 
@@ -253,6 +269,7 @@ func (t *Task) runDownload(ctx context.Context, tor *torrent.Torrent) {
 	if t.status == task.StatusActive {
 		t.status = task.StatusComplete
 	}
+	t.completedAt = time.Now()
 	t.mu.Unlock()
 }
 
