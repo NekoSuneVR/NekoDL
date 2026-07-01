@@ -45,10 +45,15 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Shipped Docker support: a multi-stage `Dockerfile` (web build → Go cross-compile via buildx `TARGETOS`/`TARGETARCH` → slim non-root Alpine runtime), `docker-compose.yml` (standalone) and `docker-compose.vpn.yml` (gluetun sidecar via `network_mode: "service:gluetun"`), a `HEALTHCHECK`, and a GitHub Actions workflow (`.github/workflows/docker.yml`) publishing a multi-arch (`linux/amd64,linux/arm64`) image to `ghcr.io/nekosunevr/nekodl` on push to `main`.
 
 - Watched the Docker workflow's first real run (triggered by the push above) to completion via `gh run watch`: succeeded in 9m23s, and the pushed manifest list genuinely includes both `linux/amd64` and `linux/arm64` digests — confirmed by reading the build log, not just trusting a green checkmark. `ghcr.io/nekosunevr/nekodl:latest` is live.
+- Built out the real Web GUI (`web/src`): an AriaNg-style sidebar (Downloading/Waiting/Finished categories with live counts) + toolbar (add, bulk pause/resume/remove with a confirmation modal, search) + task table (selection checkboxes, status/engine badges, progress bar, speed, ETA, an expandable detail row) + bottom status bar, all in NekoDL's own dark/green theme rather than copying AriaNg's colors. Add-download flow auto-detects magnet URIs vs. plain URLs from a shared textarea, plus a `.torrent` file picker, with an Options tab exposing the real per-task settings the backend supports (priority, HTTP max-connections, torrent proxy/seed/bandwidth limits). Extracted a genuinely-reused shared component kit (`web/src/components/ui/`: Button, Input, Select, Badge, ProgressBar, Tabs). Mobile: off-canvas sidebar behind a hamburger toggle, not tested on a real device.
+- Building the live-updates hook surfaced and fixed a real gap: browsers' native `WebSocket` API can't set an `Authorization` header on the handshake at all, so the events feed would have been unusable with an API token configured. Added a `?token=` query-param fallback scoped to just that one endpoint (`requireAuthWS` in `core/internal/api/auth.go`). Verified live: a token-less connection is rejected before the 101 upgrade; a `?token=`-bearing one connects and streams real data.
+- Every dashboard API call (list/add/pause/resume/cancel/remove, the WebSocket feed with and without auth) was exercised against the real running server with real requests, not just checked for "both sides compile."
 
 ### Notes
 - FTP support is still not implemented — see [TODO.md](TODO.md) Phase 2.
-- No yt-dlp, Booth, or Plex-ripper engines exist yet.
-- CI proves the image *builds* correctly for both architectures (via QEMU emulation on an amd64 runner) — nobody has pulled and run it on real arm64 hardware yet.
+- No yt-dlp, Booth, or Plex-ripper engines exist yet — the dashboard has no way to add a Booth-ID download because there's no backend API for it.
+- The dashboard's per-task detail view can't show files, torrent peers, or engine logs — no backend endpoint reports any of that yet. It says so in the UI rather than hiding the gap.
+- There's no global settings screen — no backend endpoint exists for editing the running server's own config remotely.
+- CI proves the Docker image *builds* correctly for both architectures (via QEMU emulation on an amd64 runner) — nobody has pulled and run it on real arm64 hardware yet.
 
 [Unreleased]: https://github.com/NekoSuneVR/NekoDL

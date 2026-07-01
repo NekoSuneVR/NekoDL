@@ -4,7 +4,7 @@
 
 Where aria2 gives you HTTP/FTP/BitTorrent/Metalink, NekoDL gives you that plus **first-class yt-dlp support**, **VPN/proxy-shielded torrenting**, and a **BoothDownloader engine** for grabbing your owned Booth.pm assets — all from one dashboard, one API, and one Docker container.
 
-> ⚠️ **Status: pre-alpha.** The core service (`core/`) has a working scheduler, REST API, real WebSocket progress feed, and a segmented/resumable HTTP download engine with Dropbox/Pixeldrain resolvers — all build- and test-verified. The Web GUI is a styled shell with no real functionality wired up yet, and most engines (BitTorrent, yt-dlp, Booth, Plex ripper, FTP, most one-click hosters) don't exist yet. See [TODO.md](TODO.md) for exactly what's done vs. planned per phase, and [CHANGELOG.md](CHANGELOG.md) for the detailed history.
+> ⚠️ **Status: pre-alpha.** The core service (`core/`) has a working scheduler, REST API, real WebSocket progress feed, an HTTP engine, a BitTorrent engine, and most one-click-hoster resolvers — all build- and test-verified. The Web GUI (`web/`) now has a real, working task list, add-download flow (URL/magnet/`.torrent` with auto-detect), pause/resume/cancel/remove, and live WebSocket updates — also live-verified against the real server, not just built. Still missing: yt-dlp, Booth, and Plex-ripper engines; FTP; a handful of one-click hosters; per-task file/peer/log detail (no backend endpoint for it yet); and global settings. See [TODO.md](TODO.md) for exactly what's done vs. planned per phase, and [CHANGELOG.md](CHANGELOG.md) for the detailed history.
 
 ---
 
@@ -210,7 +210,7 @@ docker run -p 6900:6900 -v nekodl-data:/data ghcr.io/nekosunevr/nekodl:latest
 
 For torrenting, use `docker-compose.vpn.yml` instead — it routes NekoDL through a [gluetun](https://github.com/qdm12/gluetun) VPN sidecar at the network level, on top of the app's own per-task kill switch (see the Privacy Model section above). Without it, NekoDL still works for HTTP/one-click-hoster downloads, and will clearly warn (not silently proceed) if you start a torrent with no proxy configured.
 
-The Web GUI is a themed shell right now — the real task list/add-task UI isn't wired up yet (see [TODO.md](TODO.md) Phase 7) — but the REST API is fully usable: `POST /api/v1/tasks` for HTTP/one-click-hoster/MEGA downloads, `POST /api/v1/torrents` for BitTorrent.
+The Web GUI has a real task list, add-download flow (paste URLs/magnet links or upload a `.torrent`, with auto-detect), and live WebSocket updates — open the dashboard and use it directly. It doesn't yet show per-task files/peers/logs or expose global server settings (see [TODO.md](TODO.md) Phase 7 for exactly what's there). The REST API underneath is also directly usable: `POST /api/v1/tasks` for HTTP/one-click-hoster/MEGA downloads, `POST /api/v1/torrents` for BitTorrent.
 
 **Configuration** is a JSON file (see [nekodl.example.json](nekodl.example.json)) with environment variable overrides on top — handy for Docker without rebuilding or mounting a custom file (precedence: env > file > defaults):
 

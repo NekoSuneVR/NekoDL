@@ -41,7 +41,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/v1/tasks/{id}/resume", s.requireAuth(s.handleResumeTask))
 	s.mux.HandleFunc("POST /api/v1/tasks/{id}/cancel", s.requireAuth(s.handleCancelTask))
 	s.mux.HandleFunc("DELETE /api/v1/tasks/{id}", s.requireAuth(s.handleRemoveTask))
-	s.mux.HandleFunc("GET /api/v1/events", s.requireAuth(s.handleEvents))
+	s.mux.HandleFunc("GET /api/v1/events", s.requireAuthWS(s.handleEvents))
 
 	if s.cfg.StaticDir != "" {
 		s.mux.Handle("/", staticHandler(s.cfg.StaticDir))

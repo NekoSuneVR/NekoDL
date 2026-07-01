@@ -139,14 +139,16 @@ Native engine modeled on [nekosuneprojects/pledo](https://github.com/nekosunepro
 - [x] Build custom **Toast** component — success/error/warning/info variants, auto-dismiss (5s) + manual dismiss, stacking (`web/src/components/Toast.tsx`)
 - [x] Build custom **Modal/Dialog** component — focus-trapped, escape-to-close, keyboard-accessible (`web/src/components/Modal.tsx`)
 - [x] Hard rule: no `window.alert()` / `window.confirm()` / `window.prompt()` — enforced via oxlint's `no-alert` rule in `web/.oxlintrc.json`, verified it actually fires on a test file before removing the test
-- [ ] Shared component kit: buttons, inputs, dropdowns, progress bars, badges, tabs — only ad-hoc Tailwind classes on individual buttons exist so far, not an extracted, reusable kit
-- [ ] Task list view: status, speed, ETA, progress bar, engine type icon (HTTP/torrent/yt-dlp/Booth)
-- [ ] Add-task flow: URL/magnet/torrent-file/Booth-ID input, auto-detect engine type
-- [ ] Per-task detail view: files, peers (for torrents), logs (for yt-dlp/Booth)
-- [ ] Global + per-task settings: bandwidth limits, proxy/VPN selection, download directory
-- [ ] Live updates via WebSocket (no polling)
-- [ ] Mobile-friendly layout
-- [ ] Auth screen (login with API token) — using the custom modal/form components, not browser-native prompts
+- [x] Shared component kit — extracted into `web/src/components/ui/`: `Button` (primary/secondary/danger), `Input`, `Select`, `Badge` (`StatusBadge`/`EngineBadge`), `ProgressBar`, `Tabs`. Genuinely reused across `TaskList`/`AddTaskModal`/`AuthPrompt`/`Toolbar`, not just built and abandoned — `Select` is the one exception, built for the kit but not yet consumed by any screen (no current UI need for it).
+- [x] Task list view: status, speed, ETA, progress bar, engine type icon — `web/src/components/TaskList.tsx`. Real icons exist for `http`/`torrent`/`mega` (the engines that actually exist); yt-dlp/Booth icons are defined but untestable since those engines don't exist in the backend yet.
+- [x] Add-task flow: URL/magnet/torrent-file auto-detect — `web/src/components/AddTaskModal.tsx`: a shared textarea (one link per line) auto-routes each line to `POST /api/v1/tasks` (URL) or `POST /api/v1/torrents` (a line starting with `magnet:`), plus a `.torrent` file picker. **Booth-ID input not implemented** — the Booth engine itself doesn't exist in the backend yet (Phase 5 unstarted), so there's no API to wire a UI to.
+- [~] Per-task detail view — implemented as an expandable row (click a task) showing everything the API currently reports (id/engine/priority/added_at, plus error/warning). **Does not show files, torrent peers, or engine logs** — no backend endpoint exposes any of that yet, and the panel says so directly in the UI rather than faking it.
+- [~] Global + per-task settings — per-task settings (priority, HTTP max-connections, torrent proxy/seed/bandwidth limits) implemented in the Add Download modal's "Options" tab, live-tested against the real API. **Global settings (editing the running server's own config remotely) not implemented** — no backend endpoint exists for that.
+- [x] Live updates via WebSocket (no polling) — `web/src/hooks/useTasks.ts`. Building this surfaced a real gap that's now fixed: browsers' native `WebSocket` API can't set an `Authorization` header on the handshake request at all, so with an API token configured the events connection would have failed outright. Added a `?token=` query-param fallback scoped to just this one endpoint (`core/internal/api/auth.go`'s new `requireAuthWS`) — verified live end-to-end: a token-less connection gets rejected (401, never reaches the 101 upgrade) and a `?token=`-bearing one connects and streams real task data.
+- [x] Mobile-friendly layout — off-canvas sidebar with a hamburger toggle below Tailwind's `md` breakpoint. Not tested on a real mobile device or browser (no such tool available here) — the responsive classes are structurally standard Tailwind, but this specific claim is weaker than the ones that were live-verified.
+- [x] Auth screen — implemented as a modal (`AuthPrompt.tsx`), matching the "custom modal/form components, not browser-native prompts" requirement. Verified against the real server, including the WS auth fallback above.
+
+**Verification note for this whole phase**: every API call the dashboard makes (`listTasks`, `addTask`, `addTorrent`, pause/resume/cancel/remove, the WebSocket events feed with and without auth) was exercised against the real, running Go server with real requests (`curl`/Monitor's `ws` source) — not just "the frontend compiles and the backend compiles separately." `npm run build` and `npm run lint` (including the `no-alert` rule) both pass on the current dashboard.
 
 ## Phase 8 — Docker & Deployment
 
