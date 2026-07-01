@@ -27,6 +27,7 @@ NekoDL keeps the parts of aria2's design that work well (a lightweight RPC-drive
 - 🛍️ **BoothDownloader engine** — wraps [Myrkie/BoothDownloader](https://github.com/Myrkie/BoothDownloader) to pull owned images/files/gifts/orders from [Booth.pm](https://booth.pm) using your account cookie/token.
 - 🎥 **Plex ripping engine** — [Pledo](https://github.com/nekosuneprojects/pledo)-inspired: log in via plex.tv (no password typed into NekoDL), browse any Plex server you have access to, and download movies/TV/playlists directly, including multiple resolution/codec versions.
 - 🌐 **HTTP/HTTPS/FTP** downloads with multi-connection segmented fetching, resume, and checksum verification.
+- 📁 **One-click hoster support** — Mediafire, Dropbox, Google Drive, and Mega.nz via a pluggable site resolver (same pattern as engines), with more hosts addable over time.
 - 🖥️ **Web GUI dashboard** — queue management, live speed/progress graphs, per-download proxy overrides, drag-and-drop `.torrent`/cookie files.
 - 🎨 **Modern dark, green-themed UI** — Tailwind CSS design system, fully custom toast/alert components and modal dialogs for prompts/confirmations. No native `alert()`/`confirm()`/`prompt()` anywhere in the app.
 - 🔌 **JSON-RPC / REST / WebSocket API** — scriptable like aria2, with an aria2-compatible RPC shim so existing tools (e.g. browser "send to aria2" extensions, and the *arr suite below) keep working.
@@ -148,6 +149,19 @@ A native engine modeled on [Pledo](https://github.com/nekosuneprojects/pledo) fo
 - Supports multiple file versions per item (different resolutions/codecs) when the server has them
 - Background sync keeps track of servers coming online/offline or changing address
 - Download server-side (NekoDL fetches from the server directly) or by capturing an in-browser stream, matching Pledo's two modes
+
+## File-Hosting / One-Click-Hoster Support
+
+Mediafire, Dropbox, Google Drive, Mega.nz, and similar "one-click hoster" links don't hand out a plain direct-download URL — each needs a small site-specific resolver to turn a share-page link into something the HTTP engine can fetch. NekoDL builds one pluggable **Resolver** interface for this (URL in → direct download info out) so more hosts can be added later without core changes, the same way yt-dlp grows its site-extractor list.
+
+Difficulty varies sharply by site:
+
+- **Dropbox** — easy; shared links already support a direct-download URL form, just a rewrite.
+- **Google Drive** — moderate; needs the "can't scan for viruses, download anyway?" confirmation flow and folder-vs-file detection.
+- **Mediafire** — moderate but fragile; no public API, so the resolver scrapes the share page for the real CDN link and will need periodic fixes when Mediafire changes its markup.
+- **Mega.nz** — a different category of problem, not just scraping: Mega encrypts everything client-side with a key embedded in the URL fragment. NekoDL uses an existing, hardened Go MEGA client library for this rather than hand-rolling the crypto — getting encryption subtly wrong fails silently (corrupted files) or worse, so this is one case where reuse beats a from-scratch implementation.
+
+Some one-click hosters' terms of service restrict automated/bulk downloading — that's on you to check for the specific host and files involved.
 
 ## NekoDL Channels (Live TV, Tunarr-inspired)
 

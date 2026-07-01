@@ -36,6 +36,19 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] Retry/backoff policy for flaky connections
 - [ ] Mirror/fallback URL support (multiple URLs for one task)
 
+### File-hosting / one-click-hoster support (Mediafire, Dropbox, Google Drive, Mega.nz, +more)
+
+These sites don't hand out a plain direct-download URL — each needs a small site-specific "resolver" that turns a share-page URL into something the HTTP engine above can actually fetch (or, for Mega.nz, into decrypted bytes). Rather than hard-coding four integrations, build one **Resolver plugin interface** (`URL in → direct download info out`) the same way engines plug into the `Task` interface, so more hosts can be added later without touching the core — this mirrors how yt-dlp grows its extractor list one site at a time instead of trying to special-case everything upfront.
+
+Difficulty varies a lot by site — being honest about that up front:
+
+- [ ] **Dropbox** (easy) — shared links already support a direct-download form (append/replace the query param, e.g. `?dl=1`); no scraping needed, just a URL rewrite.
+- [ ] **Google Drive** (moderate) — public file links need the "can't scan this file for viruses, download anyway?" confirmation flow handled (an extra token/cookie exchange), plus detecting folder vs. single-file links. Well-documented pattern (see how tools like `gdown` do it), but fragile to Google changing the flow without notice.
+- [ ] **MediaFire** (moderate, fragile) — no public API for arbitrary files; requires scraping the share page's HTML for the real CDN download link, same category of problem as a yt-dlp site extractor. Expect to have to fix this resolver periodically when MediaFire changes their markup.
+- [ ] **Mega.nz** (hard — different category of problem) — Mega encrypts everything client-side (AES-128 CTR) with the decryption key embedded in the URL fragment (`#key`); this isn't a scraping problem, it's a full crypto/API client. **Decision: use an existing, well-tested Go MEGA client library (e.g. `t3rm1n4l/go-mega`, or study rclone's `mega` backend, which is a hardened fork of it) rather than hand-rolling MEGA's encryption scheme.** Unlike the WebSocket work in Phase 1 — a well-specified protocol that was cheap to verify against a real client — getting crypto subtly wrong here fails silently (corrupted files) or worse, so this is a case where reuse is clearly the right call, not hand-rolling for the sake of avoiding a dependency.
+- [ ] Design the Resolver interface so it's trivial to add more hosts later (1fichr, Uploaded, Send.cm/Firefox Send–likes, pixeldrain, etc.) without more core changes — ship with the 3-4 above first, grow the list over time.
+- [ ] Note in docs: several one-click hosters' ToS restrict automated/bulk downloading — worth a one-line disclaimer in README, similar to the Plex-ripper ToS note, rather than silently ignoring it.
+
 ## Phase 3 — BitTorrent Engine + Privacy Layer
 
 - [ ] Integrate chosen BitTorrent library; support `.torrent` file and magnet link input
