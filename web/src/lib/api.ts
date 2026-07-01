@@ -84,6 +84,21 @@ export function addTorrent(input: AddTorrentInput): Promise<{ id: string; warnin
   return request('/api/v1/torrents', { method: 'POST', body: JSON.stringify(input) })
 }
 
+export interface AddYtdlpInput {
+  url: string
+  format?: string
+  no_playlist?: boolean
+  subtitles?: boolean
+  output_template?: string
+  proxy_addr?: string
+  cookies_file_base64?: string
+  priority?: number
+}
+
+export function addYtdlp(input: AddYtdlpInput): Promise<{ id: string; warning?: string }> {
+  return request('/api/v1/ytdlp', { method: 'POST', body: JSON.stringify(input) })
+}
+
 export function pauseTask(id: string): Promise<void> {
   return request(`/api/v1/tasks/${id}/pause`, { method: 'POST' })
 }

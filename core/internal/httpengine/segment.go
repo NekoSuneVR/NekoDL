@@ -3,38 +3,99 @@ package httpengine
 import (
 	"context"
 	"io"
+	"mime"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 )
 
 const minSegmentSize = 1 << 20 // 1 MiB — don't bother splitting small files into many connections
 
-// probe issues a Range: bytes=0-0 request to learn the file size and
-// whether the server honors byte ranges at all.
-func probe(ctx context.Context, client *http.Client, url string) (total int64, rangesSupported bool, err error) {
+// probe issues a Range: bytes=0-0 request to learn the file size, whether
+// the server honors byte ranges at all, and — if present — the real
+// filename from Content-Disposition. That header matters most for
+// one-click-hoster resolvers (Google Drive, Dropbox, ...): their direct
+// URLs are opaque (e.g. drive.google.com/uc?id=...), so a filename derived
+// from the URL path alone is meaningless (confirmed live: Google Drive
+// produced "<task-id>-uc" instead of the file's real name).
+func probe(ctx context.Context, client *http.Client, url string) (total int64, rangesSupported bool, filename string, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return 0, false, err
+		return 0, false, "", err
 	}
 	req.Header.Set("Range", "bytes=0-0")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return 0, false, err
+		return 0, false, "", err
 	}
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, resp.Body)
 
+	filename = contentDispositionFilename(resp.Header.Get("Content-Disposition"))
+
 	switch resp.StatusCode {
 	case http.StatusPartialContent:
-		return parseContentRangeTotal(resp.Header.Get("Content-Range")), true, nil
+		return parseContentRangeTotal(resp.Header.Get("Content-Range")), true, filename, nil
 	case http.StatusOK:
-		return resp.ContentLength, false, nil
+		return resp.ContentLength, false, filename, nil
 	default:
-		return 0, false, &statusError{resp.StatusCode}
+		return 0, false, "", &statusError{resp.StatusCode}
 	}
+}
+
+// contentDispositionFilename extracts a server-suggested filename from a
+// Content-Disposition header, preferring the RFC 5987 filename* (percent-
+// encoded, charset-aware) form over plain filename= when both are present.
+// Returns "" if the header is absent, unparseable, or names nothing usable.
+func contentDispositionFilename(header string) string {
+	if header == "" {
+		return ""
+	}
+	_, params, err := mime.ParseMediaType(header)
+	if err != nil {
+		return ""
+	}
+	if star := params["filename*"]; star != "" {
+		if name := decodeRFC5987(star); name != "" {
+			return sanitizeFilename(name)
+		}
+	}
+	return sanitizeFilename(params["filename"])
+}
+
+// decodeRFC5987 decodes the "charset'lang'percent-encoded-value" form used
+// by filename*, e.g. "UTF-8''Terms%20of%20Use.pdf". Only UTF-8 is handled —
+// the only charset any of NekoDL's resolvers have been observed to send.
+func decodeRFC5987(v string) string {
+	parts := strings.SplitN(v, "'", 3)
+	if len(parts) != 3 {
+		return ""
+	}
+	decoded, err := url.QueryUnescape(parts[2])
+	if err != nil {
+		return ""
+	}
+	return decoded
+}
+
+// sanitizeFilename defends against a malicious/misbehaving server naming a
+// file "../../etc/passwd" or "..\\..\\windows\\win.ini" via
+// Content-Disposition: strips any directory components (both slash
+// styles — Content-Disposition is a wire value, not an OS path, so this
+// uses "path" rather than the OS-specific "path/filepath") and leading
+// dots, keeping just a plain basename.
+func sanitizeFilename(name string) string {
+	name = strings.ReplaceAll(name, "\\", "/")
+	name = path.Base(path.Clean(name))
+	name = strings.TrimLeft(name, ".")
+	if name == "" || name == "." || name == "/" {
+		return ""
+	}
+	return name
 }
 
 func parseContentRangeTotal(header string) int64 {

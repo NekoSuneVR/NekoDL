@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -30,6 +31,18 @@ type Options struct {
 
 	Checksum *Checksum // nil disables verification
 	Client   *http.Client
+}
+
+// renamedForFilenameHint recomputes DestPath's basename using a
+// Content-Disposition-supplied filename, preserving DestPath's directory
+// and its existing "<id>-" collision-safe prefix.
+func renamedForFilenameHint(dest, filename string) string {
+	dir, base := filepath.Split(dest)
+	prefix := base
+	if idx := strings.Index(base, "-"); idx != -1 {
+		prefix = base[:idx]
+	}
+	return filepath.Join(dir, prefix+"-"+filename)
 }
 
 // Task is an HTTP/HTTPS download. It implements task.Task.
@@ -247,7 +260,7 @@ func (t *Task) ensureSegments(ctx context.Context) error {
 
 	var lastErr error
 	for _, url := range t.urls {
-		total, ranged, err := t.probeWithRetry(ctx, url)
+		total, ranged, filename, err := t.probeWithRetry(ctx, url)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return err
@@ -257,14 +270,18 @@ func (t *Task) ensureSegments(ctx context.Context) error {
 		}
 
 		t.mu.Lock()
+		if filename != "" {
+			t.dest = renamedForFilenameHint(t.dest, filename)
+		}
 		t.total = total
 		t.rangesSupported = ranged
 		t.segments = buildSegments(total, t.maxConn, ranged)
 		snap := t.snapshotLocked()
+		dest := t.dest
 		t.mu.Unlock()
 
 		if ranged && total > 0 {
-			if err := preallocate(t.dest, total); err != nil {
+			if err := preallocate(dest, total); err != nil {
 				return err
 			}
 		}
@@ -324,13 +341,13 @@ func (t *Task) downloadSegmentWithRetry(ctx context.Context, file *os.File, url 
 // probeWithRetry retries transient probe failures the same way segment
 // downloads are retried — a flaky connection on the very first request
 // shouldn't fail the whole task immediately.
-func (t *Task) probeWithRetry(ctx context.Context, url string) (total int64, ranged bool, err error) {
+func (t *Task) probeWithRetry(ctx context.Context, url string) (total int64, ranged bool, filename string, err error) {
 	err = retryWithBackoff(ctx, t.maxRetry, func() error {
 		var e error
-		total, ranged, e = probe(ctx, t.client, url)
+		total, ranged, filename, e = probe(ctx, t.client, url)
 		return e
 	})
-	return total, ranged, err
+	return total, ranged, filename, err
 }
 
 // retryWithBackoff calls fn until it succeeds, ctx is cancelled, or it has

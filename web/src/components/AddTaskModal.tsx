@@ -3,7 +3,7 @@ import { Modal } from './Modal'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { Tabs } from './ui/Tabs'
-import { addTask, addTorrent } from '../lib/api'
+import { addTask, addTorrent, addYtdlp } from '../lib/api'
 import { useToast } from './Toast'
 
 interface AddTaskModalProps {
@@ -27,6 +27,7 @@ export function AddTaskModal({ open, onClose, onAdded }: AddTaskModalProps) {
   const [tab, setTab] = useState('Links')
   const [links, setLinks] = useState('')
   const [torrentFile, setTorrentFile] = useState<File | null>(null)
+  const [useYtdlp, setUseYtdlp] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   // Options tab — applies to every link submitted in this batch.
@@ -37,9 +38,18 @@ export function AddTaskModal({ open, onClose, onAdded }: AddTaskModalProps) {
   const [maxDownloadBps, setMaxDownloadBps] = useState(0)
   const [maxUploadBps, setMaxUploadBps] = useState(0)
 
+  // yt-dlp-specific options — only sent when "Download with yt-dlp" is on.
+  const [ytdlpFormat, setYtdlpFormat] = useState('')
+  const [ytdlpNoPlaylist, setYtdlpNoPlaylist] = useState(false)
+  const [ytdlpSubtitles, setYtdlpSubtitles] = useState(false)
+  const [ytdlpOutputTemplate, setYtdlpOutputTemplate] = useState('')
+  const [ytdlpProxyAddr, setYtdlpProxyAddr] = useState('')
+  const [ytdlpCookiesFile, setYtdlpCookiesFile] = useState<File | null>(null)
+
   function reset() {
     setLinks('')
     setTorrentFile(null)
+    setYtdlpCookiesFile(null)
     setTab('Links')
   }
 
@@ -66,11 +76,26 @@ export function AddTaskModal({ open, onClose, onAdded }: AddTaskModalProps) {
       }
     }
 
+    const ytdlpCookiesFileBase64 = ytdlpCookiesFile ? await fileToBase64(ytdlpCookiesFile) : undefined
+
     for (const line of lines) {
       const kind = classifyLine(line)
       if (kind === 'magnet') {
         await submitOne(() =>
           addTorrent({ magnet_uri: line, proxy_addr: proxyAddr || undefined, seed, max_download_bps: maxDownloadBps || undefined, max_upload_bps: maxUploadBps || undefined, priority }),
+        )
+      } else if (kind === 'url' && useYtdlp) {
+        await submitOne(() =>
+          addYtdlp({
+            url: line,
+            format: ytdlpFormat || undefined,
+            no_playlist: ytdlpNoPlaylist,
+            subtitles: ytdlpSubtitles,
+            output_template: ytdlpOutputTemplate || undefined,
+            proxy_addr: ytdlpProxyAddr || undefined,
+            cookies_file_base64: ytdlpCookiesFileBase64,
+            priority,
+          }),
         )
       } else if (kind === 'url') {
         await submitOne(() => addTask({ url: line, max_connections: maxConnections, priority }))
@@ -116,6 +141,15 @@ export function AddTaskModal({ open, onClose, onAdded }: AddTaskModalProps) {
               autoFocus
             />
           </div>
+          <label className="flex items-center gap-2 text-sm text-text-primary">
+            <input
+              type="checkbox"
+              checked={useYtdlp}
+              onChange={(e) => setUseYtdlp(e.target.checked)}
+              className="h-4 w-4 rounded border-surface-border bg-surface-900 accent-brand-500"
+            />
+            Download with yt-dlp (YouTube and 1000+ other sites)
+          </label>
           <p className="text-center text-xs text-text-muted">— or —</p>
           <div>
             <label className="mb-1 block text-xs text-text-muted" htmlFor="add-task-file">
@@ -157,6 +191,59 @@ export function AddTaskModal({ open, onClose, onAdded }: AddTaskModalProps) {
                 onChange={(e) => setMaxConnections(Number(e.target.value))}
               />
             </LabeledField>
+          </fieldset>
+
+          <fieldset className="space-y-3">
+            <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">
+              yt-dlp (only applies when "Download with yt-dlp" is checked on the Links tab)
+            </legend>
+            <LabeledField label='Format (yt-dlp -f syntax, e.g. "best", blank = yt-dlp default)'>
+              <Input
+                placeholder="best"
+                value={ytdlpFormat}
+                onChange={(e) => setYtdlpFormat(e.target.value)}
+              />
+            </LabeledField>
+            <LabeledField label="Output filename template (blank = yt-dlp default)">
+              <Input
+                placeholder="%(title)s.%(ext)s"
+                value={ytdlpOutputTemplate}
+                onChange={(e) => setYtdlpOutputTemplate(e.target.value)}
+              />
+            </LabeledField>
+            <LabeledField label="Proxy for this download (host:port, optional)">
+              <Input
+                placeholder="127.0.0.1:9050"
+                value={ytdlpProxyAddr}
+                onChange={(e) => setYtdlpProxyAddr(e.target.value)}
+              />
+            </LabeledField>
+            <LabeledField label="Cookies file (Netscape cookies.txt, optional — for sites requiring login)">
+              <input
+                type="file"
+                accept=".txt"
+                onChange={(e) => setYtdlpCookiesFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm text-text-muted"
+              />
+            </LabeledField>
+            <label className="flex items-center gap-2 text-sm text-text-primary">
+              <input
+                type="checkbox"
+                checked={ytdlpNoPlaylist}
+                onChange={(e) => setYtdlpNoPlaylist(e.target.checked)}
+                className="h-4 w-4 rounded border-surface-border bg-surface-900 accent-brand-500"
+              />
+              Single video only (ignore playlist if the URL is part of one)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-text-primary">
+              <input
+                type="checkbox"
+                checked={ytdlpSubtitles}
+                onChange={(e) => setYtdlpSubtitles(e.target.checked)}
+                className="h-4 w-4 rounded border-surface-border bg-surface-900 accent-brand-500"
+              />
+              Download subtitles
+            </label>
           </fieldset>
 
           <fieldset className="space-y-3">

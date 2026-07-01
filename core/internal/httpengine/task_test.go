@@ -319,6 +319,69 @@ func TestRetrySucceedsAfterTransientFailure(t *testing.T) {
 	}
 }
 
+// TestContentDispositionRenamesDestination reproduces a real bug: a
+// Google Drive resolved URL (drive.google.com/uc?export=download&id=...)
+// has no meaningful filename in its path, so the initial guess ends up as
+// "<id>-uc". The real filename only shows up in the final response's
+// Content-Disposition header — this confirms the task renames its
+// destination file to match once that header is seen.
+func TestContentDispositionRenamesDestination(t *testing.T) {
+	payload := []byte("terms of use license contents")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Disposition", `attachment; filename="Terms of Use License for Mayo_EN.pdf"`)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(payload)
+	}))
+	defer srv.Close()
+
+	initialDest := filepath.Join(t.TempDir(), "19ff622e86ddc9db-uc")
+	tk, err := New(Options{ID: "t9", URLs: []string{srv.URL}, DestPath: initialDest})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if err := tk.Resume(); err != nil {
+		t.Fatalf("Resume: %v", err)
+	}
+	waitForStatus(t, tk, task.StatusComplete, 5*time.Second)
+
+	wantDest := filepath.Join(filepath.Dir(initialDest), "19ff622e86ddc9db-Terms of Use License for Mayo_EN.pdf")
+	got, err := os.ReadFile(wantDest)
+	if err != nil {
+		t.Fatalf("expected renamed dest %q to exist: %v", wantDest, err)
+	}
+	if string(got) != string(payload) {
+		t.Fatalf("content mismatch: got %q want %q", got, payload)
+	}
+	if _, err := os.Stat(initialDest); !os.IsNotExist(err) {
+		t.Fatalf("expected the placeholder path %q to not exist, stat err = %v", initialDest, err)
+	}
+}
+
+func TestContentDispositionRFC5987FilenameStar(t *testing.T) {
+	payload := []byte("percent-encoded filename contents")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Disposition", `attachment; filename*=UTF-8''Terms%20of%20Use.pdf`)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(payload)
+	}))
+	defer srv.Close()
+
+	initialDest := filepath.Join(t.TempDir(), "abc123-uc")
+	tk, err := New(Options{ID: "t10", URLs: []string{srv.URL}, DestPath: initialDest})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if err := tk.Resume(); err != nil {
+		t.Fatalf("Resume: %v", err)
+	}
+	waitForStatus(t, tk, task.StatusComplete, 5*time.Second)
+
+	wantDest := filepath.Join(filepath.Dir(initialDest), "abc123-Terms of Use.pdf")
+	if _, err := os.ReadFile(wantDest); err != nil {
+		t.Fatalf("expected renamed dest %q to exist: %v", wantDest, err)
+	}
+}
+
 func TestPauseStopsAndResumeContinues(t *testing.T) {
 	const totalSize = 2 << 20 // 2 MiB, big enough to not finish instantly
 	payload := make([]byte, totalSize)
